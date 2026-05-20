@@ -1,0 +1,109 @@
+---
+title: "System logs and support ticket management"
+description: "Review a chronological audit trail of up to 200 system actions and manage support tickets submitted by operators, all from the AgroPulse administration area."
+---
+
+AgroPulse records every significant action in a structured audit log and provides a built-in support ticketing system. Administrators can monitor activity, investigate issues, and respond to operator requests — all from the same administration area.
+
+<Tabs>
+  <Tab title="System logs">
+
+## System logs
+
+The **Logs** page displays a chronological audit trail of up to 200 recent entries, fetched via `GET /api/logs`. Each entry corresponds to a `LogDto`:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `number` | Unique log entry identifier |
+| `action` | `string` | The action that was performed (see categories below) |
+| `details` | `string` | Human-readable description of what changed |
+| `timestamp` | `string` | ISO 8601 datetime of when the action occurred |
+| `userId` | `number` | ID of the user who triggered the action |
+
+### Action categories
+
+AgroPulse classifies log entries into four primary action types, each with a distinct badge:
+
+| Action key | Badge color | Examples |
+|---|---|---|
+| `LOGIN` | Blue | User authenticated successfully |
+| `CREATE` | Green | Greenhouse, sensor, actuator, or user created |
+| `UPDATE` | Yellow | Configuration change, role assignment, threshold update |
+| `DELETE` | Red | Greenhouse, sensor, user, or reading deleted |
+
+Any entry whose `action` field does not contain one of the keys above is rendered with a neutral badge. The full action string (e.g. `CREATE_GREENHOUSE`, `UPDATE_USER_ROLE`) is always shown verbatim so nothing is hidden.
+
+### Filtering logs
+
+The filter bar at the top of the Logs page lets you narrow the list by:
+
+- **Free-text search** — matches against `action`, `details`, and the performer's identifier simultaneously.
+- **Action type** — a dropdown populated dynamically from the unique action strings in the current dataset.
+- **User** — a dropdown listing every user who appears in the loaded entries.
+
+Apply any combination of filters together. Click **Limpiar** (Clear) to reset all filters at once. Click **Refrescar** (Refresh) to reload the latest 200 entries from the backend.
+
+<Tip>
+  The log table is scrollable up to 600 px tall. If you need entries older than the 200-entry window, contact your backend administrator to export the full log from the database directly.
+</Tip>
+
+  </Tab>
+  <Tab title="Support tickets">
+
+## Support tickets
+
+The **Support** page (`/admin/support`) is a lightweight helpdesk. Operators submit tickets describing problems; administrators review and respond. Each ticket is a `TicketDto`:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `number` | Unique ticket identifier |
+| `subject` | `string` | Short summary of the problem |
+| `description` | `string` | Full description provided by the operator |
+| `status` | `OPEN` \| `IN_PROGRESS` \| `CLOSED` | Current resolution state |
+| `createdAt` | `string` | ISO 8601 creation timestamp |
+| `updatedAt` | `string` | ISO 8601 timestamp of the last status change |
+| `userId` | `number` | ID of the user who submitted the ticket |
+
+The `SupportPage` component also tracks `priority` (`LOW` | `MEDIUM` | `HIGH` | `CRITICAL`) and `adminResponse` at the application layer, though these fields are extended beyond the base `TicketDto`.
+
+### Ticket statuses
+
+| Status | Badge color | Meaning |
+|---|---|---|
+| `OPEN` | Yellow | Submitted, not yet reviewed |
+| `IN_PROGRESS` | Blue | An administrator is actively working on it |
+| `RESOLVED` | Green | The issue has been fixed |
+| `CLOSED` | Gray | No further action required |
+
+### Creating a support ticket (operators)
+
+<Steps>
+  <Step title="Open the Support page">
+    Navigate to **Admin → Support**. Operators see a **+ Nuevo ticket** button; administrators do not — they manage existing tickets instead.
+  </Step>
+  <Step title="Fill in the form">
+    Enter a concise **Subject** and a detailed **Description** of the problem. Select a **Priority** that reflects the severity:
+
+    - **Low** — not urgent, can wait.
+    - **Medium** — needs attention soon.
+    - **High** — actively impacting work.
+    - **Critical** — system is down.
+  </Step>
+  <Step title="Submit">
+    Click **Enviar ticket**. AgroPulse calls `POST /api/tickets` and the ticket appears immediately in the list with status `OPEN`.
+  </Step>
+</Steps>
+
+### Managing tickets (administrators)
+
+Administrators see all tickets across all users. Each open ticket shows two action buttons:
+
+- **Responder** — opens an inline reply panel where you can write a response, set the new status (`IN_PROGRESS`, `RESOLVED`, or `CLOSED`), and submit. This calls `PUT /api/tickets/:id` with the updated status.
+- **Close (×)** — immediately sets the status to `CLOSED` without a reply.
+
+<Info>
+  Operator-submitted tickets are scoped to that operator's session. Administrators see every ticket regardless of which user created it, along with the submitting user's name and ID.
+</Info>
+
+  </Tab>
+</Tabs>

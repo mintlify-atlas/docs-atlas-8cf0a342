@@ -1,0 +1,102 @@
+---
+title: "Managing users, roles, and greenhouse access"
+description: "Create and manage user accounts, assign Admin or Operator roles, deactivate users, and control which greenhouses each operator is permitted to access."
+---
+
+The Users section is restricted to administrators. It gives you full visibility into every account registered in AgroPulse — whether created locally or authenticated via Google OAuth — and lets you control what each person can do and see.
+
+<Warning>
+  Only users whose `role` is `ADMIN` or `admin` can access the Users page and the Role Management panel. Operators attempting to navigate to these routes are redirected to the dashboard.
+</Warning>
+
+## User account fields
+
+Each user account maps to the following `UserDto` fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `number` | Unique identifier |
+| `username` | `string` | Login handle |
+| `email` | `string` | Email address (primary key for OAuth users) |
+| `full_name` / `fullName` | `string` | Display name shown in the UI |
+| `role` | `ADMIN` \| `admin` \| `USER` \| `user` | Access level |
+| `active` | `boolean` | Whether the account can log in |
+| `avatar` | `string \| null` | Profile photo URL or base64 data URI |
+| `provider` | `string` | Auth provider — `local` or `google` |
+| `googleId` | `string` | Populated for Google OAuth accounts |
+| `greenhouseIds` | `number[]` | IDs of greenhouses the user can access |
+
+## Viewing all users
+
+Navigate to **Admin → Users** to see a merged list of every account. AgroPulse combines:
+
+- **Local accounts** — created directly in the app, stored in the backend database.
+- **Supabase / Google OAuth accounts** — users who signed in with Google. These show a **Google OAuth** badge and cannot be deleted from within AgroPulse.
+
+The page loads up to all registered users and de-duplicates by email so the same person never appears twice.
+
+## Creating a new local user
+
+Click **+ Nuevo** at the top of the Users page to open the creation form. Fill in:
+
+- **Username** — required, used to log in.
+- **Password** — required, stored hashed on the backend.
+- **Full name** — optional display name.
+- **Role** — `USER` (operator) or `ADMIN`.
+
+Submit the form to call `POST /api/users`. The new card appears in the list immediately.
+
+## Deactivating and reactivating users
+
+<Warning>
+  Deactivating a user blocks them from logging in at their next session. The backend checks `active === false` during authentication and rejects the request. Any active session the user already holds continues until it expires or they log out manually.
+</Warning>
+
+Deactivation is managed by an administrator via a direct backend update (`PUT /api/users/:id`) that sets `active` to `false`. The user's data and greenhouse assignments are preserved. To reactivate, set `active` back to `true` using the same endpoint.
+
+## Deleting a user
+
+Click the trash icon on any local user card and confirm the prompt. This calls `DELETE /api/users/:id` and also removes the user from all greenhouse assignment records. Google OAuth accounts do not have a delete button — to revoke their access, deactivate the account or remove their greenhouse assignments instead.
+
+## Managing roles
+
+The **Role Management** panel (`AdminPanel`) is embedded within the administration view. It loads every user via `GET /api/auth/users` (requires the `X-Admin-Email` header) and lets you promote or demote each account with a dropdown.
+
+| Role value | Label in UI | Capabilities |
+|---|---|---|
+| `USER` / `user` | Operator | Read sensor data, view assigned greenhouses |
+| `ADMIN` / `admin` | Administrator | Full access including user, role, and settings management |
+
+Selecting a new role calls `PUT /api/auth/users/:id/role`. The change propagates to the operator's session within approximately 10 seconds — they do not need to log out.
+
+<Info>
+  An administrator cannot change their own role through the UI. The dropdown is hidden for the currently authenticated user to prevent accidental self-demotion.
+</Info>
+
+## Assigning a user to a greenhouse
+
+Greenhouse assignment is also available directly inside a greenhouse's **Users** tab. Use the steps below for the recommended workflow from that context:
+
+<Steps>
+  <Step title="Open the greenhouse">
+    Navigate to **Greenhouses** and click the greenhouse you want to manage.
+  </Step>
+  <Step title="Go to the Users tab">
+    Inside the greenhouse detail view, select the **Users** tab. You will see a list of operators who currently have access.
+  </Step>
+  <Step title="Select a user">
+    Find the operator you want to add. You can filter the list by name or email.
+  </Step>
+  <Step title="Click Assign">
+    Click the **Assign** button next to the user. AgroPulse calls `PUT /api/auth/users/:id/greenhouses` with the updated `ids` array.
+  </Step>
+  <Step title="Confirm access">
+    The operator's `greenhouseIds` array is updated immediately on the backend. Their browser will reflect the change within 10 seconds without requiring a logout.
+  </Step>
+</Steps>
+
+You can also manage greenhouse assignments directly from the **Role Management** panel. Expand any operator's row using the chevron button to reveal a checkbox grid of every greenhouse. Checking or unchecking a greenhouse persists the change to the backend instantly, with optimistic UI so the checkbox responds without waiting for the network round-trip.
+
+<Tip>
+  Greenhouse assignment checkboxes are only shown for users with the `USER` / `user` role. Administrators have unrestricted access to all greenhouses and do not appear in the assignment grid.
+</Tip>

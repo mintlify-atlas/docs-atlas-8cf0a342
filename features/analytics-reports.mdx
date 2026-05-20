@@ -1,0 +1,118 @@
+---
+title: "Analytics charts and scheduled email reports"
+description: "Explore time-series sensor charts filtered by greenhouse and time range, then export data as CSV or PDF, or schedule recurring automated email deliveries."
+---
+
+AgroPulse provides two complementary views for understanding your historical data. **Analytics** renders interactive line charts for every sensor type, lets you zoom into a specific greenhouse, and exports the underlying data. **Reports** manages a list of scheduled email deliveries so stakeholders receive sensor summaries automatically without logging in.
+
+## Analytics
+
+### Sensor charts
+
+The Analytics page displays one line chart per sensor type. In **global mode** (no greenhouse selected) three fixed charts are shown by default:
+
+| Sensor | Unit | Color |
+|--------|------|-------|
+| Interior temperature | °C | Orange |
+| Ambient humidity | % | Sky blue |
+| Soil moisture | % | Green |
+
+When you select a specific greenhouse, the page auto-detects all sensor types present in that greenhouse's readings and renders a chart for each one. The full set of supported types is:
+
+| Type | Label | Unit |
+|------|-------|------|
+| `TEMPERATURE` | Temperatura | °C |
+| `TEMPERATURE_INTERNAL` | Temperatura Interior | °C |
+| `TEMPERATURE_EXTERNAL` | Temperatura Exterior | °C |
+| `HUMIDITY` | Humedad Ambiente | % |
+| `SOIL_MOISTURE` | Humedad del Suelo | % |
+| `LIGHT` | Luminosidad | lx |
+| `CO2` | CO₂ | ppm |
+| `PRESSURE` | Presión | hPa |
+
+Each chart card includes a stat row showing **Min**, **Max**, **Avg**, and **Current** for the selected period.
+
+### Time range filter
+
+Three time ranges are available from a selector bar at the top of the charts grid.
+
+| Option | Coverage |
+|--------|----------|
+| **Últimas 24h** | Previous 24 hours, X-axis shows `HH:MM` |
+| **Últimos 7 días** | Previous 7 days, X-axis shows abbreviated weekday and date |
+| **Últimos 30 días** | Previous 30 days, X-axis shows day and month |
+
+### Greenhouse filter
+
+Chip buttons above the range selector list every greenhouse in your account. Click a chip to scope all charts to that greenhouse. The **Todos** chip restores the global view. When two or more greenhouses exist and the global view is active, an **Activity by greenhouse** breakdown appears below the charts. It shows each greenhouse's reading count, percentage share of total readings, and average temperature for the selected period. Each row has a **Ver** link to switch to that greenhouse's view and a **CSV** shortcut to export just that greenhouse's data.
+
+### Summary card
+
+Below the charts, a summary card shows the total reading counts grouped by sensor category (temperature, humidity, soil, and total) for the active period and greenhouse selection.
+
+### Exporting data
+
+<CardGroup cols={2}>
+  <Card title="CSV export" icon="download">
+    Downloads a `.csv` file with columns: `Fecha/Hora`, `Tipo de Sensor`, `Valor`, `Unidad`, `Invernadero`, and `Origen`. In global mode the file is named `agropulse-global-YYYY-MM-DD.csv`; per-greenhouse exports use the greenhouse name.
+  </Card>
+  <Card title="PDF report" icon="file-text">
+    Opens a print-preview page containing an executive summary table (Min / Max / Avg for the top four sensor types) followed by a full data table of up to 500 readings. Use the browser's **Print → Save as PDF** option to save it.
+  </Card>
+</CardGroup>
+
+Click **Refrescar** to reload readings from the server without changing the current filter.
+
+---
+
+## Reports
+
+The Reports page manages automated email delivery of sensor summaries. Reports are scoped to individual greenhouses — you must select a greenhouse chip before you can schedule a new delivery.
+
+### Report schedules
+
+Each scheduled report (`ReportDto`) has the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | Unique schedule identifier |
+| `type` | string | Delivery frequency: `daily`, `weekly`, or `monthly` |
+| `createdAt` | string | ISO timestamp when the schedule was created |
+| `fileUrl` | string (optional) | URL of the most recently generated report file |
+
+### Frequency options
+
+<CardGroup cols={3}>
+  <Card title="Daily" icon="calendar-days">
+    Sent every day at **8:00 AM**. Useful for high-intensity monitoring periods or crops with tight tolerance windows.
+  </Card>
+  <Card title="Weekly" icon="calendar-days">
+    Sent every **Monday at 8:00 AM**. A good default for most greenhouse operations.
+  </Card>
+  <Card title="Monthly" icon="calendar-days">
+    Sent on the **1st of each month at 8:00 AM**. Suitable for long-term trend reviews and management summaries.
+  </Card>
+</CardGroup>
+
+### Scheduling a report
+
+1. Select a greenhouse chip to enable scheduling for that location.
+2. Click **Agendar** to open the form.
+3. Enter the recipient email address (pre-filled with your account email).
+4. Select **Diario**, **Semanal**, or **Mensual**.
+5. Click **Agendar** to confirm. The new entry appears in the list immediately.
+
+### Managing existing schedules
+
+Each schedule card shows the recipient email, frequency label, and linked greenhouse. From the card you can:
+
+- **Enviar** — Trigger an immediate one-off delivery to that address via `POST /api/reports/send-email`.
+- **Delete (trash icon)** — Remove the schedule from the local list with an animated exit. The entry is removed from the `localStorage` cache immediately.
+
+### On-demand CSV download
+
+Click **Descargar ahora** at any time to generate and download a fresh daily CSV for all greenhouses without creating a recurring schedule.
+
+<Note>
+  Schedule data is cached in `localStorage` under the key `agropulse_reports_v1` so the list loads instantly on revisit even before the server responds.
+</Note>

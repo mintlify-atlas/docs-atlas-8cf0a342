@@ -1,0 +1,94 @@
+---
+title: "Settings: profile, AI keys, and system info"
+description: "Update your display name and avatar, configure AI provider API keys for Groq, GitHub, and Gemma, and review the AgroPulse system version and build info."
+---
+
+The **Settings** page (`/admin/settings`) is the central place to manage your personal profile, review the current system build, and — if you are an administrator — configure the AI provider keys that power AgroPulse's intelligent features.
+
+## Profile
+
+Every authenticated user can edit their own profile. The profile card shows your current display name, email, avatar, and role badge.
+
+Click **Editar** (or the camera icon on your avatar) to open the edit form. You can update two things:
+
+**Display name** — sets `full_name` on your account. This name appears throughout the dashboard wherever your identity is shown. If left blank, the UI falls back to your username.
+
+**Avatar** — you have two options:
+
+- **URL** — paste a link to any publicly accessible image (must start with `https://`).
+- **File upload** — click **Seleccionar imagen** to upload a file from your device. The file is read locally and stored as a base64 data URI. Maximum file size is **1 MB**; larger files are rejected before upload begins.
+
+Profile changes are saved via `PUT /api/users/:id`. If the backend is unreachable, the change is applied to your local session and cached in the browser so the avatar and name persist across page refreshes.
+
+## System information
+
+The system info card shows read-only details about the running deployment:
+
+| Field | Value |
+|---|---|
+| Version | AgroPulse v10.0 |
+| Build | 2026.05 |
+| Supabase | Connected / Not configured |
+| AI providers active | 0 – 3 of 3 |
+
+The **Supabase** indicator reflects whether the Supabase client was initialized with valid credentials at startup. A green **Connected** status means Google OAuth and Supabase-backed queries are available. A red **Sin configurar** status means only local authentication is active.
+
+## AI provider API keys
+
+<Warning>
+  The AI keys section is only visible to administrators. Operators see a notice informing them that this section requires admin access.
+</Warning>
+
+AgroPulse can connect to three AI providers to power its analysis and chat features. Configure each provider by entering its API key below.
+
+<Note>
+  All API keys are stored exclusively in your browser's `localStorage` under the keys `agropulse_groq_key`, `agropulse_github_token`, and `agropulse_gemma_key`. They are **never transmitted to the AgroPulse backend or any third party** — they are sent directly from your browser to the respective AI provider's API endpoint when a feature is used.
+
+  Clearing browser storage or using a different browser will require you to re-enter the keys.
+</Note>
+
+<Steps>
+  <Step title="Open Settings">
+    Navigate to **Admin → Settings**. The AI keys card is visible only if your account has the `ADMIN` role.
+  </Step>
+  <Step title="Enter your Groq key">
+    Paste your Groq API key into the **Groq (LLaMA-3.3-70B)** field. Groq keys begin with `gsk_`.
+
+    ```text
+    gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    ```
+  </Step>
+  <Step title="Enter your GitHub AI token">
+    Paste your GitHub personal access token into the **GitHub AI (phi-4-mini)** field. GitHub tokens begin with `ghp_`.
+
+    ```text
+    ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    ```
+  </Step>
+  <Step title="Enter your Google Gemma key">
+    Paste your Google AI Studio key into the **Gemma 4 (Google AI)** field. These keys begin with `AIza`.
+
+    ```text
+    AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    ```
+  </Step>
+  <Step title="Save">
+    Click **Guardar todas las claves**. Each non-empty field is written to `localStorage` immediately. Empty fields remove the corresponding stored key. A brief **Claves guardadas** confirmation appears for two seconds.
+  </Step>
+</Steps>
+
+You do not need to configure all three providers. AgroPulse uses whichever keys are present. The system info card shows how many of the three providers are currently active.
+
+<Tip>
+  To revoke a key, clear the field and save. The key is removed from `localStorage` and that provider becomes unavailable until a new key is entered.
+</Tip>
+
+## Developer information
+
+The development team card displays attribution information for the project:
+
+| Field | Value |
+|---|---|
+| Developer | Diego Armando Pinta Cuasquen |
+| University | Universidad Cooperativa de Colombia – Nariño |
+| Project | Semestre 2025 |

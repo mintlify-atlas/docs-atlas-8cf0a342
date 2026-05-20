@@ -1,0 +1,98 @@
+---
+title: "Authentication and access control in AgroPulse"
+description: "Sign in with Google via Supabase OAuth, understand the Admin and Operator roles, and learn how greenhouse access is assigned, cached, and refreshed."
+icon: "lock"
+---
+
+AgroPulse uses Google OAuth through Supabase as its only sign-in method. There are no passwords to manage — your Google account is your identity. Once authenticated, the app determines your role and which greenhouses you can access before letting you into the dashboard.
+
+## Signing in
+
+On the login page, click the **Google** tab and then **Continue with Google**. Supabase opens a Google OAuth consent screen. After you approve, Google redirects you back to AgroPulse and your session is established.
+
+The app immediately calls the backend to register your account (first visit) or retrieve your existing profile. Your Google display name and profile photo are pulled from the OAuth metadata and used throughout the interface.
+
+<Note>
+  The first sign-in of the day may take a few extra seconds if the backend has gone to sleep on Render's free hosting tier. The app sets an 8-second timeout on the backend call. If the server doesn't respond in time, it falls back to a local session using the data cached in your browser, then retries in the background once the server wakes up. Your session is valid either way.
+</Note>
+
+## User roles
+
+AgroPulse has two roles. Your role determines what you can see and do in the dashboard.
+
+<Tabs>
+  <Tab title="Admin">
+    Admins have unrestricted access to every feature and every greenhouse in the system.
+
+    **What admins can do:**
+    - View and manage all greenhouses
+    - Register and configure sensors, actuators, and ESP32 devices
+    - Create and edit crops, automation rules, and alert thresholds
+    - Access Logs, Users, Roles, and Support pages under Administration
+    - Assign greenhouse access to operators
+    - Configure AI provider keys in Settings
+    - Generate reports and view all analytics
+
+    Internally, an admin's `allowedGreenhouseIds` value is `null`, which the app treats as "all access." Admin status is determined by the `ADMIN` role flag returned by the backend, or — as a fallback during cold-start — by whether the email address matches the admin account or contains the word `admin`.
+  </Tab>
+  <Tab title="Operator">
+    Operators have access only to the greenhouses an admin has explicitly assigned to them.
+
+    **What operators can do:**
+    - View and interact with their assigned greenhouses
+    - Monitor sensors and control actuators
+    - Manage crops, automation rules, and alerts within their greenhouses
+    - Use the AI assistant (once an admin has configured the keys)
+    - Generate reports and view analytics for their greenhouses
+
+    **What operators cannot do:**
+    - See or manage greenhouses they haven't been assigned to
+    - Access the Logs, Users, Roles, or Administration pages
+    - Configure AI provider keys in Settings
+
+    An operator's `allowedGreenhouseIds` is an array of greenhouse ID numbers, for example `[1, 3, 7]`. An empty array means no access has been granted yet.
+  </Tab>
+</Tabs>
+
+## Greenhouse access for operators
+
+When an operator logs in, the app fetches their assigned greenhouse IDs from the backend. If the list is empty, they land on the **No Access** page after an 8-second wait.
+
+<AccordionGroup>
+  <Accordion title="How access is assigned">
+    Only admins can assign greenhouse access. In the AgroPulse dashboard, go to **Administration → Roles** and select the operator's account. From there you can add or remove greenhouses from their access list.
+
+    The assignment is stored in the backend database. The next time the operator signs in — or when they click **Retry** on the No Access page — the app fetches the updated list.
+  </Accordion>
+  <Accordion title="How operators can refresh their access">
+    If an admin has just granted you access and you're still on the No Access screen, click the **Retry** button. This triggers `refreshAccess`, which works in three stages:
+
+    1. **Direct lookup by user ID** — the fastest path. The app calls `GET /api/users/{id}/greenhouses` to get the current list.
+    2. **Re-authentication** — if the direct lookup fails (for example, if the backend was briefly offline and your user ID wasn't confirmed yet), the app calls `POST /api/auth/login` with your Google email to fetch both your confirmed user ID and greenhouse list in one request.
+    3. **Local cache** — if both network calls fail, the app checks browser localStorage for any previously cached assignments. This is a last resort and only used if there's a cached value; it will not overwrite valid state with an empty result.
+  </Accordion>
+  <Accordion title="Why there's an 8-second wait before the No Access page">
+    When the backend is starting up (cold-start on Render), the login API call may time out before returning the greenhouse list. Rather than immediately showing a No Access page to a legitimate user whose access just hasn't loaded yet, the app waits up to 8 seconds for the `allowedGreenhouseIds` to be populated. After 8 seconds with no data, it shows the No Access page with a **Retry** button.
+  </Accordion>
+</AccordionGroup>
+
+## Session persistence
+
+AgroPulse uses Supabase's built-in session management. Your Google session token is stored in the browser and automatically refreshed by Supabase. When you return to the app, `getSession()` is called on load — if a valid session exists, you're signed in immediately without going through the Google OAuth flow again.
+
+Profile data (avatar URL and display name) is cached in `localStorage` under the key `agropulse_profile_cache` keyed by email. This cache is used to display your profile while the backend loads, and is updated whenever you sign in or save profile changes.
+
+## Profile management
+
+You can update your display name and profile photo from **Settings → My Profile**.
+
+- **Display name** — enter a new name and click **Save changes**. The name is saved to the backend and updated in the local cache.
+- **Profile photo** — paste a URL or upload an image file (max 1 MB). The photo is saved to the backend and cached locally in localStorage.
+
+<Note>
+  Your Google profile photo is applied automatically on every sign-in and overrides any locally set photo. If you want a custom avatar to persist, save it via the Settings profile editor — the app merges your saved avatar with your Google metadata.
+</Note>
+
+## Signing out
+
+Click **Sign out** (Cerrar sesión) at the bottom of the sidebar or at the bottom of the Settings page. This clears your local session state and calls `supabase.auth.signOut()` to invalidate the Supabase token.

@@ -1,0 +1,127 @@
+---
+title: "Sensors & actuators: types, protocols, and thresholds"
+description: "Register sensors and actuators to a greenhouse, assign GPIO pins, configure alert thresholds, and keep sensor records deduplicated automatically."
+---
+
+Sensors are the data sources for AgroPulse. Each sensor belongs to a greenhouse and reports readings that the Dashboard, crop profiles, and automation rules act on. Actuators are output devices—pumps, fans, LEDs, and similar—that automation rules can activate or deactivate in response to sensor conditions. The Sensors page polls the backend every **15 seconds** and pauses polling when the browser tab is hidden.
+
+<Tabs>
+  <Tab title="Sensors">
+
+## Sensor types
+
+| Type | Unit | Description |
+|---|---|---|
+| `TEMPERATURE` | °C | General air temperature |
+| `TEMPERATURE_INTERNAL` | °C | Interior air temperature (inside the greenhouse) |
+| `TEMPERATURE_EXTERNAL` | °C | Exterior air temperature (outside the greenhouse) |
+| `HUMIDITY` | % | Interior relative humidity |
+| `HUMIDITY_EXTERNAL` | % | Exterior relative humidity |
+| `SOIL_MOISTURE` | % | Volumetric soil moisture |
+| `LIGHT` | lx | Illuminance |
+| `CO2` | ppm | Carbon dioxide concentration |
+| `PRESSURE` | hPa | Atmospheric pressure |
+
+## Supported protocols
+
+| Protocol | Typical hardware |
+|---|---|
+| `DHT22` | DHT22 temperature/humidity module |
+| `DHT11` | DHT11 temperature/humidity module |
+| `ADC` | Analog-to-digital converter (ESP32 internal) |
+| `ANALOG` | Generic analog signal |
+| `I2C` | I²C bus devices (BMP280, SHT31, etc.) |
+| `DIGITAL` | Digital GPIO input |
+| `ONE_WIRE` | 1-Wire bus devices (DS18B20, etc.) |
+
+## Adding a sensor
+
+<Steps>
+  <Step title="Open the Sensors page">
+    Navigate to **Sensores** in the sidebar and click **Nuevo**.
+  </Step>
+  <Step title="Fill in the sensor details">
+    | Field | Required | Notes |
+    |---|---|---|
+    | Name | Yes | Descriptive label shown on sensor cards |
+    | Type | Yes | Select from the sensor types above |
+    | Protocol | Yes | Communication protocol used by the hardware |
+    | GPIO pin | No | The ESP32 GPIO number the sensor is wired to |
+    | Greenhouse | No | Assigns the sensor to a specific greenhouse |
+    | Location | No | Optional free-text location within the greenhouse |
+  </Step>
+  <Step title="Save">
+    Click **Guardar sensor**. The sensor appears in the list and the Dashboard will include it in the next poll.
+  </Step>
+</Steps>
+
+<Note>
+  Sensors can also be added directly from the **Device** tab of a greenhouse card. That flow pre-selects the correct greenhouse and shows only the GPIO pins not already in use.
+</Note>
+
+## Alert thresholds
+
+Each sensor has an optional threshold configuration that controls when the backend raises an alert for anomalous readings.
+
+| Field | Default | Description |
+|---|---|---|
+| Min value | — | Alert when the reading falls below this value |
+| Max value | — | Alert when the reading exceeds this value |
+| No-data minutes | `10` | Alert when no reading has arrived for this many minutes |
+| Stuck minutes | `30` | Alert when the reading has not changed for this many minutes |
+| Spike percent | `50` | Alert when a reading jumps by more than this percentage from the previous value |
+
+Expand the threshold panel on any sensor card and click **Guardar umbrales** to save. A green badge on the card confirms that thresholds are configured.
+
+## Deduplication
+
+When multiple sensor records exist with the same type, GPIO pin, and greenhouse (a common side-effect of ESP32 reconnections), admin users can remove the duplicates automatically. Click the **Dedup** button in the page header. The newest record for each combination is kept; older duplicates are deleted. A toast notification reports how many were removed.
+
+<Warning>
+  The Dedup button is only available to admin accounts. Operator accounts see only the sensors assigned to their greenhouses and cannot run deduplication.
+</Warning>
+
+  </Tab>
+  <Tab title="Actuators">
+
+## Actuator types
+
+| Type | Typical device |
+|---|---|
+| `PUMP` | Water pump or irrigation pump |
+| `FAN` | Ventilation or cooling fan |
+| `LED` | Grow light or indicator LED |
+| `SERVO` | Servo motor (vent flaps, valves) |
+| `RELAY` | Generic relay module |
+| `MOTOR` | DC motor or stepper motor |
+
+## Adding an actuator
+
+<Steps>
+  <Step title="Open the Actuators page">
+    Navigate to **Actuadores** in the sidebar and click **Nuevo**, or use the **+ Actuador** button in the greenhouse Device tab.
+  </Step>
+  <Step title="Fill in the actuator details">
+    | Field | Required | Notes |
+    |---|---|---|
+    | Name | Yes | Descriptive label |
+    | Type | Yes | Select from the actuator types above |
+    | Greenhouse | Yes | The greenhouse this actuator belongs to |
+    | GPIO pin | No | The ESP32 GPIO output pin |
+    | Active-Low | No | Enable for relay modules (HW-383 style) where LOW = active |
+  </Step>
+  <Step title="Save">
+    Click **Guardar actuador**. The actuator is registered and available for selection in automation rules.
+  </Step>
+</Steps>
+
+<Note>
+  Enable **Active-Low** for relay boards that use a normally-closed configuration (common with HW-383 modules). When active-low is enabled, the ESP32 pulls the GPIO low to activate the relay, and high to deactivate it.
+</Note>
+
+## Manual control
+
+From the Actuators page list, each actuator card shows its current status (active/inactive) and provides **Activar** / **Desactivar** toggle buttons for direct manual override without an automation rule.
+
+  </Tab>
+</Tabs>

@@ -1,0 +1,138 @@
+---
+title: "Deploying AgroPulse to Vercel"
+description: "How to build and deploy the AgroPulse Vite SPA to Vercel, configure environment variables in the dashboard, and handle Render backend cold-start delays."
+---
+
+AgroPulse is a static single-page application. The build process compiles TypeScript and bundles everything with Vite into a `dist/` folder. That folder is then served by a CDN or static hosting provider — no Node.js server is required at runtime. The project ships with a `vercel.json` configured for Vercel.
+
+## Build commands
+
+| Command | Script | Description |
+|---------|--------|-------------|
+| `npm run dev` | `vite --host` | Start Vite dev server on port 3000, accessible on all network interfaces (useful for mobile testing) |
+| `npm run build` | `tsc && vite build` | Type-check then bundle to `dist/` |
+| `npm run preview` | `vite preview --host` | Preview the production build locally |
+| `npm run typecheck` | `tsc --noEmit` | Type-check without building |
+
+<Note>
+  `npm run build` runs `tsc` before `vite build`. TypeScript errors will abort the build. Run `npm run typecheck` first to surface errors without waiting for the full bundle step.
+</Note>
+
+## Vite build output
+
+Vite is configured in `vite.config.ts` to output to `dist/` with `esbuild` minification and no sourcemaps:
+
+```typescript
+build: {
+  outDir: 'dist',
+  minify: 'esbuild',
+  sourcemap: false
+}
+```
+
+## Deploying to Vercel
+
+`vercel.json` at the project root tells Vercel to rewrite every route to `index.html`, enabling client-side routing to work on direct URL access or browser refresh:
+
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+}
+```
+
+<Steps>
+  <Step title="Install the Vercel CLI (optional)">
+    You can deploy via the Vercel dashboard or the CLI. To use the CLI:
+
+    ```bash
+    npm i -g vercel
+    ```
+  </Step>
+
+  <Step title="Connect your repository">
+    In the [Vercel dashboard](https://vercel.com/new), import your repository. Vercel will detect the Vite framework automatically.
+
+    If deploying via CLI from the project directory:
+
+    ```bash
+    vercel
+    ```
+  </Step>
+
+  <Step title="Set build settings">
+    Verify the following settings in the Vercel project configuration:
+
+    | Setting | Value |
+    |---------|-------|
+    | Framework preset | Vite |
+    | Build command | `npm run build` |
+    | Output directory | `dist` |
+    | Install command | `npm install` |
+  </Step>
+
+  <Step title="Add environment variables">
+    In your Vercel project, go to **Settings → Environment Variables** and add each variable from `.env.example` with its production value:
+
+    - `VITE_API_URL` — your live backend URL (e.g. `https://agropulse-api.onrender.com`)
+    - `VITE_SUPABASE_URL`
+    - `VITE_SUPABASE_ANON_KEY`
+    - `VITE_EMAILJS_SERVICE_ID`
+    - `VITE_EMAILJS_TEMPLATE_ID`
+    - `VITE_EMAILJS_PUBLIC_KEY`
+    - `VITE_GROQ_KEY`, `VITE_GITHUB_TOKEN`, `VITE_GEMMA_KEY` (optional)
+
+    <Warning>
+      Vite inlines environment variables at build time. If you change a variable in the Vercel dashboard, you must trigger a new deployment for the change to take effect. Environment variables are **not** read at runtime.
+    </Warning>
+  </Step>
+
+  <Step title="Deploy">
+    Trigger a deployment from the Vercel dashboard by pushing to your connected branch, or run:
+
+    ```bash
+    vercel --prod
+    ```
+
+    Vercel will run `npm run build`, upload the `dist/` assets, and apply the SPA rewrite rule from `vercel.json`.
+  </Step>
+</Steps>
+
+## Backend cold-start (Render)
+
+The AgroPulse REST backend is typically hosted on [Render](https://render.com) using a free-tier web service. Free-tier Render services spin down after 15 minutes of inactivity and take approximately **6 seconds** to wake up on the next request.
+
+The frontend is built to handle this gracefully:
+
+- The HTTP client in `ApiService.ts` applies an **8-second request timeout** before throwing a connection error. This gives Render enough time to wake the service before the request fails.
+- On a connection error, the UI falls back to **locally cached data** (`localStorage`) so users see stale-but-useful data rather than a blank screen.
+- A status indicator in the dashboard informs users that the backend is starting up.
+
+<Note>
+  If you host the backend on a paid Render plan or another provider that does not have cold-start delays (Railway, Fly.io, a VPS), these accommodations have no negative impact — the 8-second timeout is never reached under normal operating conditions.
+</Note>
+
+## Local development
+
+```bash
+# Install dependencies
+npm install
+
+# Start the dev server (port 3000)
+npm run dev
+```
+
+The Vite dev server proxies `/api/*` to `http://localhost:8080` automatically (see `vite.config.ts`), so you do not need to set `VITE_API_URL` locally as long as your backend is running on port 8080.
+
+For a full local stack, start the backend first, then the frontend:
+
+```bash
+# Terminal 1 — backend
+cd ../backend-AgroPulse
+./mvnw spring-boot:run   # or: npm start, depending on the backend stack
+
+# Terminal 2 — frontend
+cd ../frontend-AgroPulse
+npm run dev
+```
+
+Open `http://localhost:3000` in your browser.

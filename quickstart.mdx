@@ -1,81 +1,86 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
-icon: 'rocket'
+title: "Get started with AgroPulse in minutes"
+description: "Sign in with Google, get greenhouse access assigned by your admin, and start monitoring live sensor readings from ESP32 devices in five steps."
+icon: "rocket"
 ---
 
-## Get started in three steps
+AgroPulse is ready to use the moment you sign in. This guide walks you through the onboarding flow from first login to your first live sensor reading — including what to expect if you're an operator waiting for greenhouse access, and how to unlock the AI assistant.
 
-Get your documentation site running locally and make your first customization.
+<Steps>
+  <Step title="Sign in with Google">
+    Navigate to the AgroPulse login page and click the **Google** tab, then click **Continue with Google**. AgroPulse uses Supabase OAuth, so no password is required — your Google account is your identity.
 
-### Step 1: Set up your local environment
+    After you authenticate, the app contacts the backend to register or retrieve your account. Your Google display name and profile photo are used automatically.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    <Note>
+      The backend is hosted on Render's free tier and may be in a cold-start state when you first sign in. If the login spinner runs for several seconds, that's expected — the server is waking up. The app falls back to a local session and re-syncs your account once the backend responds (typically within 8 seconds).
+    </Note>
+  </Step>
 
-### Step 2: Deploy your changes
+  <Step title="Wait for greenhouse access (operators only)">
+    If you signed up as an operator, you won't see any greenhouse data until an admin assigns you access. After login you'll see a **"Verifying access…"** screen while the app checks whether your account has been assigned to any greenhouses.
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    If no assignment exists after 8 seconds, you'll land on the **No Access** page. You can click **Retry** at any time to re-check — this is useful right after an admin has just granted you access.
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    <Note>
+      Contact your AgroPulse administrator and provide the email address you used to sign in with Google. The admin assigns greenhouses from the **Roles** panel under **Administration**.
+    </Note>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    Admins skip this step entirely — they have unrestricted access to all greenhouses as soon as they log in.
+  </Step>
 
-### Step 3: Go live
+  <Step title="Open the Dashboard and select a greenhouse">
+    Once access is confirmed, you land on the **Dashboard** (Inicio). Use the greenhouse selector at the top of the page to choose which greenhouse to inspect.
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    Admins see all registered greenhouses. Operators see only the greenhouses they have been assigned.
 
-## Next steps
+    From the sidebar you can also navigate to **Greenhouses** (admins) to see a full list, or to **Map** to see greenhouse locations plotted geographically.
+  </Step>
 
-Now that you have your docs running, explore these key features:
+  <Step title="View live sensor readings">
+    With a greenhouse selected, the Dashboard displays real-time sensor cards updated every few seconds from the ESP32 devices connected to that greenhouse. Each card shows the current reading, the sensor type (temperature, humidity, CO₂, soil moisture, light, or pressure), and a trend indicator.
+
+    To dig deeper, go to **Sensors** in the sidebar for a full list of registered sensors with historical sparklines and alert thresholds, or to **Analytics** for time-series charts.
+
+    <Tip>
+      If a sensor card shows no data, confirm that the ESP32 device is powered on and connected to the network. The device posts readings to the backend API; no data usually means the hardware is offline.
+    </Tip>
+  </Step>
+
+  <Step title="Configure AI keys in Settings">
+    The **AI Agronomic Assistant** (IA Agronómica) requires at least one API key to be active. Go to **Settings** (Configuración) in the sidebar.
+
+    <Warning>
+      Only admins can configure AI keys. If you're an operator, the Settings page will display a notice that this section is restricted to administrators.
+    </Warning>
+
+    Under **AI** you can add keys for up to three providers:
+
+    | Provider | Key prefix | Model used |
+    |----------|-----------|------------|
+    | Groq | `gsk_...` | llama-3.1-8b-instant |
+    | GitHub AI | `ghp_...` | openai/gpt-4o-mini |
+    | Google Gemma | `AIza...` | gemma-4-31b-it |
+
+    Paste your key into the corresponding field and click **Save all keys**. Keys are stored in your browser's localStorage and are never sent to the AgroPulse backend.
+
+    Once at least one key is saved, open **IA Agronómica** from the sidebar to start asking questions about your crops and sensor data.
+  </Step>
+</Steps>
+
+## What's next
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Authentication" icon="lock" href="/authentication">
+    Learn how Google OAuth works, understand the two roles, and see how greenhouse access is managed.
+  </Card>
+  <Card title="Dashboard" icon="gauge" href="/features/dashboard">
+    Explore sensor cards, live charts, and the alert feed on the main control panel.
+  </Card>
+  <Card title="Sensors & Actuators" icon="microchip" href="/features/sensors-actuators">
+    Register sensors, set thresholds, and control actuators from the dashboard.
+  </Card>
+  <Card title="AI Assistant" icon="robot" href="/features/ai-assistant">
+    Ask agronomic questions and get recommendations based on your live sensor context.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

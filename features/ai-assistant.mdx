@@ -1,0 +1,116 @@
+---
+title: "AI agronomic assistant and sensor predictions"
+description: "Ask agronomic questions and get sensor-context-aware answers from Groq LLaMA, GitHub GPT-4o mini, or Google Gemma — all with Spanish-language responses."
+---
+
+AgroPulse includes a built-in agronomic AI assistant that answers questions about your greenhouse in real time. The assistant knows the identity "AgroPulse IA", responds exclusively in Spanish, and grounds every answer in actual sensor readings when they are available. A separate **Machine Learning** tab uses the same provider chain to predict the next six hours of sensor values, with trend indicators and recommended actions.
+
+## How the AI works
+
+The assistant sends your prompt together with a system context to whichever AI provider is active. The system prompt tells the model:
+
+> *"Eres un experto agrónomo e ingeniero de invernaderos. Tu nombre es AgroPulse IA. Respondes en español, de forma concisa y práctica. Siempre das recomendaciones basadas en datos reales de sensores cuando están disponibles."*
+
+Current sensor readings are appended to the system context automatically so answers reflect the state of your greenhouse at the moment you ask.
+
+## AI providers and fallback order
+
+AgroPulse tries providers in order and falls back to the next one if the previous call fails or the key is missing.
+
+<Tabs>
+  <Tab title="1 — Groq (default)">
+    **Model:** `llama-3.1-8b-instant`
+
+    Groq provides the fastest inference. It is tried first whenever `VITE_GROQ_KEY` or the `agropulse_groq_key` localStorage value is present.
+
+    ```text
+    Key prefix: gsk_...
+    localStorage key: agropulse_groq_key
+    Env variable: VITE_GROQ_KEY
+    ```
+  </Tab>
+  <Tab title="2 — GitHub Models">
+    **Model:** `openai/gpt-4o-mini`
+
+    Used when Groq is unavailable. Requires a GitHub personal access token with the `models:read` permission.
+
+    ```text
+    Key prefix: ghp_...
+    localStorage key: agropulse_github_token
+    Env variable: VITE_GITHUB_TOKEN
+    ```
+  </Tab>
+  <Tab title="3 — Google Gemma">
+    **Model:** `gemma-4-31b-it`
+
+    Last fallback. Uses the Gemini-compatible OpenAI endpoint from Google AI Studio.
+
+    ```text
+    Key prefix: AIza...
+    localStorage key: agropulse_gemma_key
+    Env variable: VITE_GEMMA_KEY
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  If no provider key is configured, the assistant displays: *"No hay servicio de IA disponible. Configura Groq, GitHub o Gemma en Configuración."* You must add at least one key to use AI features.
+</Note>
+
+## Quick action prompts
+
+The AI page offers three one-click prompts so you don't have to write a query from scratch.
+
+<CardGroup cols={3}>
+  <Card title="Recommendation" icon="lightbulb">
+    Asks the AI to evaluate current temperature, humidity, and light and suggest concrete crop optimisation steps.
+  </Card>
+  <Card title="Prediction" icon="trending-up">
+    Requests a forecast of which actuators are likely to be needed in the coming hours based on current sensor trends.
+  </Card>
+  <Card title="Analysis" icon="search">
+    Produces a three-part report: overall greenhouse state, detected problems, and a prioritised list of recommended actions.
+  </Card>
+</CardGroup>
+
+You can also type any free-form question in the **Pregunta personalizada** text area and send it directly to the active AI provider.
+
+## Machine Learning — 6-hour sensor prediction
+
+The **Machine Learning** page uses the same provider chain to generate a structured prediction for the next six hours. When you click **Predecir próximas 6 horas**, the assistant receives the recent sensor history and returns:
+
+- Estimated values for each sensor at one-hour intervals
+- A trend indicator for each reading (rising, falling, or stable)
+- Recommended actions for any sensor expected to leave its safe range
+
+The prediction is presented as formatted text and is labeled with the provider that generated it (e.g., **Groq · LLaMA 3.1**).
+
+## Configure AI keys
+
+<Note>
+  Only users with the **Admin** role can save AI keys in Settings. Operators can use the AI assistant if keys have already been configured by an admin.
+</Note>
+
+<Steps>
+  <Step title="Open Settings">
+    In the sidebar, navigate to **Configuración**. The AI Keys section is visible only to admins.
+  </Step>
+  <Step title="Enter your API key">
+    Paste the key for the provider you want to activate. You can add keys for multiple providers — AgroPulse will use them in the fallback order described above.
+
+    | Provider | Where to get the key |
+    |----------|---------------------|
+    | Groq | [console.groq.com](https://console.groq.com) → API Keys |
+    | GitHub Models | GitHub → Settings → Developer settings → Personal access tokens (Classic) |
+    | Google Gemma | [aistudio.google.com](https://aistudio.google.com) → Get API key |
+  </Step>
+  <Step title="Save and verify">
+    Click **Guardar todas las claves**. The Settings page stores each non-empty key in `localStorage` under its provider key name. Return to the **IA** page — you should see a green status chip confirming the provider is active.
+  </Step>
+</Steps>
+
+The status bar at the top of the AI page shows a green chip for every active provider: **Groq activa**, **GitHub AI activa**, or **Gemma activa**. If none are active, a yellow chip reads *"Sin IA configurada — ve a Configuración"*.
+
+<Tip>
+  For production deployments, set `VITE_GROQ_KEY`, `VITE_GITHUB_TOKEN`, or `VITE_GEMMA_KEY` as environment variables (e.g., in Vercel). The app reads `localStorage` first and then falls back to the build-time env variable, so per-user overrides are still possible.
+</Tip>

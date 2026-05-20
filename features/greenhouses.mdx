@@ -1,0 +1,93 @@
+---
+title: "Greenhouses: setup, devices, and access"
+description: "Create greenhouse profiles, link ESP32 devices, assign operators, configure sensors and actuators, and manage alert recipients per greenhouse."
+---
+
+Greenhouses are the top-level organisational unit in AgroPulse. Every sensor, actuator, crop profile, automation rule, and alert recipient belongs to a specific greenhouse. Only admin accounts can create or delete greenhouses; operator accounts see only the greenhouses assigned to them.
+
+## Creating a greenhouse
+
+<Steps>
+  <Step title="Open the Greenhouses page">
+    Navigate to **Invernaderos** in the sidebar. The **Nuevo** button is visible only to admin users.
+  </Step>
+  <Step title="Fill in the details">
+    Enter the following fields in the creation form:
+
+    | Field | Required | Description |
+    |---|---|---|
+    | Name | Yes | Display name shown throughout the dashboard |
+    | Location | No | Free-text location or region (e.g. "Valle del Cauca") |
+    | Description | No | Optional notes about the greenhouse |
+  </Step>
+  <Step title="Save">
+    Click **Guardar Invernadero**. The new greenhouse appears in the list immediately.
+  </Step>
+  <Step title="Upload a photo (optional)">
+    Click the camera icon on the greenhouse card to upload a cover photo. Images are stored in the `greenhouse-photos` bucket in Supabase and linked to the greenhouse record via `photoUrl`. Supported formats: JPG, JPEG, PNG, WebP, GIF.
+  </Step>
+</Steps>
+
+<Note>
+  The `deviceId` field (ESP32 serial identifier) is set through the **Device** tab after creation, not during the initial form. An ESP32 must be programmed with the same identifier before it can send readings to the greenhouse.
+</Note>
+
+## Greenhouse tabs
+
+Each greenhouse card expands to show one of three management tabs. These tabs are only accessible to admin accounts.
+
+### Users tab
+
+Use this tab to assign operator accounts to the greenhouse. Only users assigned here will see the greenhouse in their Dashboard selector and Sensors page.
+
+- Select a user from the dropdown (all registered accounts are listed).
+- Click **Asignar** to add them. The assignment is persisted in the backend and cached locally.
+- Click **Quitar** next to a user's name to remove their access.
+
+### Device tab (ESP32 configuration)
+
+This tab displays all sensors and actuators registered to the greenhouse and allows you to add new ones. It also shows the current device ID for the linked ESP32.
+
+**GPIO map**
+
+Expand the **Mapa de pines GPIO ESP32** section to see a visual grid of all 40 GPIO pins. Pin colours indicate availability:
+
+| Colour | Meaning |
+|---|---|
+| Green | Free — available for sensors or actuators |
+| Amber | In use by an existing sensor or actuator |
+| Red | Reserved by the system — do not use |
+| Gray | Not recommended for this use case |
+
+Reserved GPIOs (do not assign): `0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 21, 22`
+
+Valid input GPIOs (sensors): `4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39`
+
+Valid output GPIOs (actuators): `4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 23, 25, 26, 27, 32, 33`
+
+**Adding a sensor**
+
+Click **+ Sensor** and fill in the name, type, protocol, and GPIO pin. The available GPIO pins shown in the selector are pre-filtered to those not already in use. See [Sensors & Actuators](/features/sensors-actuators) for supported types and protocols.
+
+**Adding an actuator**
+
+Click **+ Actuador** and fill in the name, type, and GPIO pin. Enable **Active-Low** for relay modules (HW-383 and similar), where the output is active when the GPIO is pulled low.
+
+### Alerts tab
+
+Configure who receives notifications when an alert is triggered for this greenhouse. Each recipient can receive alerts via email and/or WhatsApp (via the CallMeBot API).
+
+To add a recipient:
+
+| Field | Required | Description |
+|---|---|---|
+| Name | Yes | Display name for the recipient |
+| Email | No | Valid email address for email notifications |
+| Phone | No | International format, e.g. `+573001234567` |
+| CallMeBot API key | No | Required for WhatsApp delivery via CallMeBot |
+
+<Note>
+  To get a CallMeBot API key, send a WhatsApp message to the CallMeBot number as described at [callmebot.com](https://www.callmebot.com/blog/free-api-whatsapp-messages/). The key is tied to the phone number you register.
+</Note>
+
+Click **+ Agregar destinatario** to save the recipient. Use **Quitar** to remove one.

@@ -1,0 +1,322 @@
+---
+title: "Data model: DTOs, enums, and response wrappers"
+description: "Complete reference for every TypeScript interface and enum in src/types/index.ts — resource DTOs, domain enums, list response wrappers, and pagination shapes."
+---
+
+All types shared between the frontend and the REST API are defined in `src/types/index.ts`. The file is organised into domain enums, raw backend DTOs, list response wrappers, and app-level models. This page documents every exported type exactly as declared.
+
+## Enums
+
+These union types express the fixed value sets accepted or returned by the API.
+
+<AccordionGroup>
+  <Accordion title="SensorType">
+    ```typescript
+    export type SensorType =
+      | 'TEMPERATURE'
+      | 'TEMPERATURE_INTERNAL'
+      | 'TEMPERATURE_EXTERNAL'
+      | 'HUMIDITY'
+      | 'HUMIDITY_EXTERNAL'
+      | 'SOIL_MOISTURE'
+      | 'LIGHT'
+      | 'CO2'
+      | 'PRESSURE'
+    ```
+  </Accordion>
+
+  <Accordion title="ActuatorType">
+    ```typescript
+    export type ActuatorType = 'PUMP' | 'FAN' | 'LED' | 'SERVO' | 'RELAY' | 'MOTOR'
+    ```
+  </Accordion>
+
+  <Accordion title="Protocol">
+    Sensor communication protocol used by the ESP32 device.
+
+    ```typescript
+    export type Protocol = 'DHT22' | 'DHT11' | 'ADC' | 'ANALOG' | 'I2C' | 'DIGITAL' | 'ONE_WIRE'
+    ```
+  </Accordion>
+
+  <Accordion title="UserRole">
+    ```typescript
+    export type UserRole = 'ADMIN' | 'admin' | 'USER' | 'user'
+    ```
+
+    <Note>Both cased variants (`ADMIN`/`admin`, `USER`/`user`) are accepted for backwards compatibility with older API responses.</Note>
+  </Accordion>
+
+  <Accordion title="AlertLevel">
+    ```typescript
+    export type AlertLevel = 'INFO' | 'WARNING' | 'CRITICAL'
+    ```
+  </Accordion>
+
+  <Accordion title="RuleConditionType">
+    ```typescript
+    export type RuleConditionType = 'GREATER_THAN' | 'LESS_THAN' | 'EQUALS' | 'NOT_EQUALS'
+    ```
+  </Accordion>
+
+  <Accordion title="RuleActionType">
+    ```typescript
+    export type RuleActionType = 'ACTIVATE' | 'DEACTIVATE' | 'ALERT'
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## DTOs
+
+Each DTO is the raw shape returned by the backend. Optional fields (`?`) may be absent from API responses.
+
+<AccordionGroup>
+  <Accordion title="GreenhouseDto">
+    Represents a physical greenhouse installation.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique greenhouse identifier.</ResponseField>
+      <ResponseField name="name" type="string" required>Display name.</ResponseField>
+      <ResponseField name="location" type="string">Human-readable location string.</ResponseField>
+      <ResponseField name="description" type="string">Optional description or notes.</ResponseField>
+      <ResponseField name="active" type="boolean" required>Whether the greenhouse is currently active.</ResponseField>
+      <ResponseField name="deviceId" type="string">Identifier of the linked ESP32 device.</ResponseField>
+      <ResponseField name="latitude" type="number | null">GPS latitude for map view.</ResponseField>
+      <ResponseField name="longitude" type="number | null">GPS longitude for map view.</ResponseField>
+      <ResponseField name="photoUrl" type="string | null">URL of the greenhouse cover photo (stored in Supabase).</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="SensorDto">
+    Represents a single sensor attached to a greenhouse.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique sensor identifier.</ResponseField>
+      <ResponseField name="name" type="string" required>Display name.</ResponseField>
+      <ResponseField name="type" type="SensorType" required>Sensor measurement category.</ResponseField>
+      <ResponseField name="protocol" type="Protocol">Hardware protocol used by the sensor.</ResponseField>
+      <ResponseField name="gpioPin" type="number | null">GPIO pin number on the ESP32.</ResponseField>
+      <ResponseField name="active" type="boolean" required>Whether the sensor is enabled.</ResponseField>
+      <ResponseField name="greenhouseId" type="number">ID of the parent greenhouse.</ResponseField>
+      <ResponseField name="deviceSource" type="string">Source device identifier string.</ResponseField>
+      <ResponseField name="location" type="string">Physical location within the greenhouse.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="ActuatorDto">
+    Represents a controllable actuator (pump, fan, LED, etc.).
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique actuator identifier.</ResponseField>
+      <ResponseField name="name" type="string" required>Display name.</ResponseField>
+      <ResponseField name="type" type="ActuatorType">Actuator category.</ResponseField>
+      <ResponseField name="gpioPin" type="number | null">GPIO pin number on the ESP32.</ResponseField>
+      <ResponseField name="active" type="boolean" required>Whether the actuator is enabled in the system.</ResponseField>
+      <ResponseField name="status" type="boolean">Current on/off state of the actuator.</ResponseField>
+      <ResponseField name="activeLow" type="boolean">If `true`, the GPIO pin logic is inverted (active-low relay).</ResponseField>
+      <ResponseField name="greenhouseId" type="number">ID of the parent greenhouse.</ResponseField>
+      <ResponseField name="deviceSource" type="string">Source device identifier string.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="SensorReadingDto">
+    A single timestamped measurement from a sensor.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique reading identifier.</ResponseField>
+      <ResponseField name="sensorId" type="number" required>ID of the sensor that produced the reading.</ResponseField>
+      <ResponseField name="sensorType" type="SensorType">Sensor type copied from the sensor at write time.</ResponseField>
+      <ResponseField name="value" type="number" required>Measured value in sensor-specific units.</ResponseField>
+      <ResponseField name="timestamp" type="string" required>ISO 8601 timestamp of the measurement.</ResponseField>
+      <ResponseField name="greenhouseId" type="number">ID of the greenhouse the sensor belongs to.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="CropDto">
+    A crop profile with acceptable environmental ranges.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique crop identifier.</ResponseField>
+      <ResponseField name="name" type="string" required>Crop name.</ResponseField>
+      <ResponseField name="active" type="boolean | number" required>Whether the crop profile is active. Accepts `boolean` or legacy `0`/`1`.</ResponseField>
+      <ResponseField name="greenhouseId" type="number">Greenhouse this crop is assigned to.</ResponseField>
+      <ResponseField name="temp_min" type="number">Minimum acceptable temperature (°C).</ResponseField>
+      <ResponseField name="temp_max" type="number">Maximum acceptable temperature (°C).</ResponseField>
+      <ResponseField name="humidity_min" type="number">Minimum acceptable humidity (%).</ResponseField>
+      <ResponseField name="humidity_max" type="number">Maximum acceptable humidity (%).</ResponseField>
+      <ResponseField name="soil_moisture_min" type="number">Minimum soil moisture (%).</ResponseField>
+      <ResponseField name="soil_moisture_max" type="number">Maximum soil moisture (%).</ResponseField>
+      <ResponseField name="light_min" type="number">Minimum light level (lux).</ResponseField>
+      <ResponseField name="light_max" type="number">Maximum light level (lux).</ResponseField>
+      <ResponseField name="co2_min" type="number">Minimum CO₂ concentration (ppm).</ResponseField>
+      <ResponseField name="co2_max" type="number">Maximum CO₂ concentration (ppm).</ResponseField>
+      <ResponseField name="description" type="string">Optional notes about the crop.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="AlertDto">
+    A system-generated or rule-triggered alert.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique alert identifier.</ResponseField>
+      <ResponseField name="type" type="SensorType | string" required>The sensor type or custom category that triggered the alert.</ResponseField>
+      <ResponseField name="level" type="AlertLevel" required>Severity level: `INFO`, `WARNING`, or `CRITICAL`.</ResponseField>
+      <ResponseField name="title" type="string">Short alert title.</ResponseField>
+      <ResponseField name="message" type="string" required>Alert description message.</ResponseField>
+      <ResponseField name="timestamp" type="string">ISO 8601 timestamp of when the alert was raised.</ResponseField>
+      <ResponseField name="read" type="boolean">Whether the alert has been acknowledged.</ResponseField>
+      <ResponseField name="greenhouseId" type="number">Greenhouse the alert originates from.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="UserDto">
+    A user account.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique user identifier.</ResponseField>
+      <ResponseField name="username" type="string">Login username.</ResponseField>
+      <ResponseField name="email" type="string">User email address.</ResponseField>
+      <ResponseField name="full_name" type="string">Full name (snake_case variant).</ResponseField>
+      <ResponseField name="fullName" type="string">Full name (camelCase variant).</ResponseField>
+      <ResponseField name="role" type="UserRole" required>User role: `ADMIN` or `USER`.</ResponseField>
+      <ResponseField name="active" type="boolean">Whether the account is active.</ResponseField>
+      <ResponseField name="avatar" type="string | null">Avatar image URL (Supabase storage).</ResponseField>
+      <ResponseField name="provider" type="string">Auth provider, e.g. `google`.</ResponseField>
+      <ResponseField name="googleId" type="string">Google OAuth identifier.</ResponseField>
+      <ResponseField name="greenhouseIds" type="number[]">List of greenhouse IDs the user has access to.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="RuleDto">
+    An automation rule that triggers actuator actions based on sensor conditions.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique rule identifier.</ResponseField>
+      <ResponseField name="name" type="string" required>Display name of the rule.</ResponseField>
+      <ResponseField name="sensorType" type="SensorType" required>Sensor type the condition is evaluated against.</ResponseField>
+      <ResponseField name="conditionType" type="RuleConditionType" required>Comparison operator.</ResponseField>
+      <ResponseField name="threshold" type="number" required>Value the sensor reading is compared to.</ResponseField>
+      <ResponseField name="actuatorId" type="number" required>Actuator to control when the condition is met.</ResponseField>
+      <ResponseField name="actionType" type="RuleActionType" required>Action to perform: `ACTIVATE`, `DEACTIVATE`, or `ALERT`.</ResponseField>
+      <ResponseField name="active" type="boolean" required>Whether the rule is currently active.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="LogDto">
+    An audit log entry recording a user or system action.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique log entry identifier.</ResponseField>
+      <ResponseField name="action" type="string" required>Description of the action performed.</ResponseField>
+      <ResponseField name="details" type="string">Additional context or payload.</ResponseField>
+      <ResponseField name="timestamp" type="string" required>ISO 8601 timestamp of the action.</ResponseField>
+      <ResponseField name="userId" type="number">ID of the user who performed the action.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="ReportDto">
+    A generated report record.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique report identifier.</ResponseField>
+      <ResponseField name="type" type="string" required>Report type (e.g. `daily-csv`, `weekly-stats`).</ResponseField>
+      <ResponseField name="createdAt" type="string" required>ISO 8601 creation timestamp.</ResponseField>
+      <ResponseField name="fileUrl" type="string">Download URL for the generated file.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="TicketDto">
+    A support ticket.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique ticket identifier.</ResponseField>
+      <ResponseField name="subject" type="string" required>Ticket subject line.</ResponseField>
+      <ResponseField name="description" type="string" required>Full ticket description.</ResponseField>
+      <ResponseField name="status" type="string" required>One of `OPEN`, `IN_PROGRESS`, or `CLOSED`.</ResponseField>
+      <ResponseField name="createdAt" type="string" required>ISO 8601 creation timestamp.</ResponseField>
+      <ResponseField name="updatedAt" type="string">ISO 8601 timestamp of the last update.</ResponseField>
+      <ResponseField name="userId" type="number">ID of the user who created the ticket.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="DeviceConfigDto">
+    Full device configuration returned by `GET /api/device/config/:id`.
+
+    <Expandable title="fields">
+      <ResponseField name="deviceId" type="string">Identifier of the ESP32 device.</ResponseField>
+      <ResponseField name="sensors" type="SensorDto[]" required>List of sensors registered to this device.</ResponseField>
+      <ResponseField name="actuators" type="ActuatorDto[]" required>List of actuators registered to this device.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="GpioOptionsDto">
+    Available GPIO pins for a greenhouse device, returned by `GET /api/device/gpios/:id`.
+
+    <Expandable title="fields">
+      <ResponseField name="usedGpios" type="number[]" required>GPIO pins already assigned.</ResponseField>
+      <ResponseField name="availableForSensors" type="number[]" required>GPIO pins that can be assigned to sensors.</ResponseField>
+      <ResponseField name="availableForActuators" type="number[]" required>GPIO pins that can be assigned to actuators.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="SensorThresholdDto">
+    Threshold and anomaly detection configuration for a sensor.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number">Unique threshold record identifier.</ResponseField>
+      <ResponseField name="sensorId" type="number" required>ID of the sensor this threshold applies to.</ResponseField>
+      <ResponseField name="minValue" type="number | null">Minimum expected value; readings below this trigger an alert.</ResponseField>
+      <ResponseField name="maxValue" type="number | null">Maximum expected value; readings above this trigger an alert.</ResponseField>
+      <ResponseField name="noDataMinutes" type="number" required>Minutes of silence before a "no data" alert is raised.</ResponseField>
+      <ResponseField name="stuckMinutes" type="number" required>Minutes of identical readings before a "stuck sensor" alert is raised.</ResponseField>
+      <ResponseField name="spikePercent" type="number" required>Percentage change from the previous reading that counts as a spike.</ResponseField>
+      <ResponseField name="active" type="boolean">Whether threshold monitoring is enabled.</ResponseField>
+    </Expandable>
+  </Accordion>
+
+  <Accordion title="AlertRecipient">
+    A contact who receives alert notifications for a greenhouse.
+
+    <Expandable title="fields">
+      <ResponseField name="id" type="number" required>Unique recipient identifier.</ResponseField>
+      <ResponseField name="greenhouseId" type="number" required>Greenhouse this recipient is associated with.</ResponseField>
+      <ResponseField name="name" type="string" required>Recipient display name.</ResponseField>
+      <ResponseField name="email" type="string">Email address for notifications.</ResponseField>
+      <ResponseField name="phone" type="string">Phone number for SMS notifications.</ResponseField>
+      <ResponseField name="callmebotApikey" type="string">CallMeBot API key for WhatsApp/Telegram notifications.</ResponseField>
+      <ResponseField name="active" type="boolean" required>Whether notifications are enabled for this recipient.</ResponseField>
+    </Expandable>
+  </Accordion>
+</AccordionGroup>
+
+## List response wrappers
+
+The API wraps list responses in a resource-keyed object. Each wrapper type is defined alongside its corresponding DTO:
+
+| Type | Shape |
+|------|-------|
+| `GreenhouseListResponse` | `{ greenhouses: GreenhouseDto[] }` |
+| `SensorListResponse` | `{ sensors: SensorDto[] }` |
+| `ActuatorListResponse` | `{ actuators: ActuatorDto[] }` |
+| `ReadingListResponse` | `{ readings: SensorReadingDto[] }` |
+| `CropListResponse` | `{ crops: CropDto[] }` |
+| `AlertListResponse` | `{ alerts: AlertDto[] }` |
+| `UserListResponse` | `{ users: UserDto[] }` |
+| `RuleListResponse` | `{ rules: RuleDto[] }` |
+| `LogListResponse` | `{ logs: LogDto[] }` |
+| `TicketListResponse` | `{ tickets: TicketDto[] }` |
+
+## Pagination
+
+Paginated endpoints return a `PaginatedResponse<T>` envelope:
+
+```typescript
+export interface PaginatedResponse<T> {
+  data: T[]
+  total?: number
+  page?: number
+  limit?: number
+}
+```
+
+<Note>Not all list endpoints use `PaginatedResponse`. Most currently return the flat list wrapper (e.g. `GreenhouseListResponse`). The `limit` query parameter is supported on `/api/readings` and `/api/logs`.</Note>

@@ -1,0 +1,121 @@
+---
+title: "Environment variables: configuration reference"
+description: "All VITE_ environment variables for running AgroPulse locally or in production — backend URL, Supabase credentials, AI provider keys, and EmailJS settings."
+---
+
+AgroPulse reads configuration exclusively from Vite environment variables prefixed with `VITE_`. These are inlined at build time — changes require a rebuild. Copy `.env.example` to `.env` in the project root and fill in the values before running `npm run dev` or `npm run build`.
+
+## Example `.env` file
+
+```bash
+# Backend REST API
+VITE_API_URL=http://localhost:8080
+
+# Supabase
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# AI providers (optional — also configurable in the Settings UI)
+VITE_GROQ_KEY=
+VITE_GITHUB_TOKEN=
+VITE_GEMMA_KEY=
+
+# EmailJS — for email verification on registration
+# Create an account at https://www.emailjs.com and configure a service + template
+VITE_EMAILJS_SERVICE_ID=
+VITE_EMAILJS_TEMPLATE_ID=
+VITE_EMAILJS_PUBLIC_KEY=
+```
+
+## Required variables
+
+<ParamField path="VITE_API_URL" type="string" required>
+  Base URL of the AgroPulse REST backend. All API calls in `ApiService.ts` are prefixed with this value.
+
+  **Default (dev proxy):** `http://localhost:8080`
+
+  In development, Vite also proxies requests matching `/api/*` to `http://localhost:8080` (configured in `vite.config.ts`), so this variable is only strictly required for production builds.
+</ParamField>
+
+<ParamField path="VITE_SUPABASE_URL" type="string" required>
+  Your Supabase project URL. Found in your Supabase dashboard under **Project Settings → API → Project URL**.
+
+  Example: `https://abcdefghijklmn.supabase.co`
+</ParamField>
+
+<ParamField path="VITE_SUPABASE_ANON_KEY" type="string" required>
+  The Supabase anon (public) key. Found in your Supabase dashboard under **Project Settings → API → Project API keys → `anon` `public`**.
+
+  This key is safe to expose in the browser. Row-level security policies on your Supabase project control what unauthenticated users can access.
+</ParamField>
+
+## EmailJS variables
+
+AgroPulse uses EmailJS to send a verification code to the user's email address during registration. All three variables are required for registration to work.
+
+<ParamField path="VITE_EMAILJS_SERVICE_ID" type="string" required>
+  The EmailJS service ID. Created in your EmailJS dashboard under **Email Services**.
+
+  Example: `service_abc123`
+</ParamField>
+
+<ParamField path="VITE_EMAILJS_TEMPLATE_ID" type="string" required>
+  The EmailJS template ID for the verification email. Created in your EmailJS dashboard under **Email Templates**.
+
+  Example: `template_xyz789`
+</ParamField>
+
+<ParamField path="VITE_EMAILJS_PUBLIC_KEY" type="string" required>
+  Your EmailJS public key (previously called "User ID"). Found in **Account → General → Public Key**.
+
+  Example: `ABCDEF_ghijklmnop`
+</ParamField>
+
+## AI provider variables (optional)
+
+<Note>
+  All three AI provider keys are fully optional. If none are set, AI-powered features in the dashboard (natural language queries, automated suggestions) are disabled. Keys can also be entered at runtime through the AgroPulse **Settings** UI without requiring a rebuild.
+</Note>
+
+<ParamField path="VITE_GROQ_KEY" type="string">
+  API key for [Groq](https://console.groq.com). Used for fast inference on open-weight models (Llama 3, Mixtral, etc.).
+</ParamField>
+
+<ParamField path="VITE_GITHUB_TOKEN" type="string">
+  Personal access token for the [GitHub Models](https://github.com/marketplace/models) endpoint. Grants access to hosted models (GPT-4o, Phi-3, etc.) via `api.github.com`.
+</ParamField>
+
+<ParamField path="VITE_GEMMA_KEY" type="string">
+  API key for [Google AI Studio](https://aistudio.google.com) (Gemma / Gemini models). Used as a fallback or alternative AI backend.
+</ParamField>
+
+## Map overlay variable (optional)
+
+<ParamField path="VITE_OPENWEATHER_KEY" type="string">
+  API key for [OpenWeatherMap](https://openweathermap.org/api) tile layers. Used exclusively for the weather tile overlays (rain, temperature, clouds, wind) on the Map page. The popup weather data (current conditions) is sourced from Open-Meteo and does not require a key.
+
+  Without this variable the layer buttons in the map are disabled with a notice. All other map functionality works without it.
+</ParamField>
+
+## Vite dev proxy
+
+In development mode, `vite.config.ts` proxies `/api/*` requests to `http://localhost:8080`:
+
+```typescript
+server: {
+  host: true,
+  port: 3000,
+  proxy: {
+    '/api': {
+      target: 'http://localhost:8080',
+      changeOrigin: true,
+    }
+  }
+}
+```
+
+This means you can leave `VITE_API_URL` empty locally and requests will still reach the backend. In production — including Vercel deployments — `VITE_API_URL` must point to your live backend URL because the proxy is not active after the build.
+
+<Warning>
+  Never commit a populated `.env` file to version control. The `.env.example` file (with empty values) is safe to commit. Add `.env` to `.gitignore`.
+</Warning>

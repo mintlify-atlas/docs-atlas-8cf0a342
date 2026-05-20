@@ -1,0 +1,106 @@
+{
+  "projectType": "saas",
+  "projectName": "AgroPulse",
+  "projectDescription": "A real-time IoT greenhouse management dashboard that monitors sensors and actuators, automates rules, and provides AI-powered agronomic insights — built for farm operators and administrators.",
+  "theme": "willow",
+  "primaryColor": "#22c55e",
+  "lightColor": "#bbf7d0",
+  "darkColor": "#020d05",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/dashboard",
+              "features/greenhouses",
+              "features/sensors-actuators",
+              "features/crops-automation"
+            ]
+          },
+          {
+            "group": "Intelligence",
+            "pages": [
+              "features/ai-assistant",
+              "features/analytics-reports",
+              "features/alerts-map"
+            ]
+          },
+          {
+            "group": "Administration",
+            "pages": [
+              "admin/users-roles",
+              "admin/logs-support",
+              "admin/settings"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Developer Guide",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "dev/architecture",
+              "dev/data-model",
+              "dev/api-overview"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "dev/environment",
+              "dev/deployment"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Real-time sensor monitoring (temperature, humidity, CO₂, soil moisture, light, pressure) via ESP32 over WebSocket",
+    "Multi-greenhouse management with per-greenhouse user access control",
+    "Automated rules engine: trigger actuators (pump, fan, LED, relay) based on sensor thresholds",
+    "AI agronomic assistant with support for Groq (LLaMA 3.1), GitHub Models (GPT-4o mini), and Google Gemma 4",
+    "Interactive MapLibre GL map showing greenhouse locations",
+    "Analytics dashboard with historical charts and exportable reports",
+    "Role-based access: Admin (full access) and Operator (assigned greenhouses only)",
+    "Google OAuth authentication via Supabase with profile management",
+    "Alert system with configurable recipients via email and WhatsApp (CallMeBot)",
+    "3D greenhouse visualization using Spline and Three.js"
+  ],
+  "publicApiSurface": [
+    "GET /api/greenhouses — list all greenhouses",
+    "POST /api/greenhouses — create greenhouse",
+    "GET /api/greenhouses/:id/users — list assigned users",
+    "POST /api/greenhouses/:id/users — assign user to greenhouse",
+    "GET /api/greenhouses/:id/alert-recipients — list alert recipients",
+    "POST /api/greenhouses/:id/alert-recipients — add alert recipient",
+    "GET /api/sensors — list sensors",
+    "POST /api/sensors — create sensor",
+    "GET /api/actuators — list actuators",
+    "POST /api/actuators — create actuator",
+    "GET /api/readings — list sensor readings",
+    "GET /api/crops — list crops",
+    "GET /api/alerts — list alerts",
+    "POST /api/alerts — create alert",
+    "GET /api/rules — list automation rules",
+    "POST /api/rules — create automation rule",
+    "GET /api/logs — list system logs",
+    "GET /api/reports — list reports",
+    "GET /api/users — list users",
+    "POST /api/auth/login — authenticate via Google OAuth",
+    "GET /api/users/:id/greenhouses — get user's assigned greenhouses"
+  ]
+}

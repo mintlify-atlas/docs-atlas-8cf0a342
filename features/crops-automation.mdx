@@ -1,0 +1,119 @@
+---
+title: "Crops and automation rules in AgroPulse"
+description: "Define crop threshold profiles that drive dashboard alerts, then create IF/THEN automation rules that activate or deactivate actuators on sensor readings."
+---
+
+Crops and automation rules work together to keep greenhouse conditions within the limits your plants need. A crop profile stores the acceptable min/max range for each environmental variable. When the Dashboard detects a reading outside those ranges it creates an alert automatically. Automation rules go further: they instruct the ESP32 to activate or deactivate an actuator—or fire an alert—whenever a sensor reading crosses a threshold you define.
+
+## Crop profiles
+
+A crop profile is a named set of per-sensor min/max thresholds. You can create multiple profiles for a greenhouse and switch between them; only one profile is **active** at a time. The Dashboard uses the active profile to decide when to generate auto-alerts.
+
+### Threshold fields
+
+| Field | Unit | Description |
+|---|---|---|
+| `temp_min` / `temp_max` | °C | Acceptable temperature range |
+| `humidity_min` / `humidity_max` | % | Acceptable air humidity range |
+| `soil_moisture_min` / `soil_moisture_max` | % | Acceptable soil moisture range |
+| `light_min` / `light_max` | lx | Acceptable illuminance range |
+| `co2_min` / `co2_max` | ppm | Acceptable CO₂ concentration range |
+
+### Creating a crop profile
+
+<Steps>
+  <Step title="Select a greenhouse">
+    On the **Cultivos** page, click a greenhouse chip to filter the view. The **Nuevo cultivo** button only appears when a greenhouse is selected.
+  </Step>
+  <Step title="Enter the crop name and variety">
+    Provide a name (e.g. "Tomato") and an optional variety (e.g. "Cherry"). Both are free-text fields.
+  </Step>
+  <Step title="Set threshold ranges">
+    Enter min/max values for temperature, air humidity, and soil moisture. You can also use the **Rellenar con IA** button—AgroPulse will call an AI model and pre-fill the ranges based on the crop name and variety. Review the values before saving.
+  </Step>
+  <Step title="Mark as active">
+    Check **Cultivo activo** if this profile should be used for Dashboard alert generation. Only one profile is treated as active; the Dashboard picks the first profile flagged active, or the first profile in the list if none is flagged.
+  </Step>
+  <Step title="Save">
+    Click **Crear cultivo**. The profile appears in the list with a visual range bar for each threshold pair.
+  </Step>
+</Steps>
+
+### How Dashboard alerts are triggered
+
+Every time the Dashboard polls the backend (every 5 seconds), it compares the latest readings against the active crop profile. If a value is outside the defined range, an `AutoAlert` is created locally and a `WARNING`-level alert is posted to the backend via the alerts API. The alert banner at the top of the Dashboard can be dismissed per-alert, but the backend record persists.
+
+<Note>
+  Alert generation on the Dashboard only covers temperature, humidity, and soil moisture. Light and CO₂ thresholds from the crop profile are stored and available for automation rules, but are not currently checked in the Dashboard poll loop.
+</Note>
+
+---
+
+## Automation rules
+
+Automation rules define IF/THEN logic scoped to a greenhouse. When the condition is met, AgroPulse instructs the linked actuator to perform the specified action.
+
+### Rule fields
+
+Each rule (`RuleDto`) has the following fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Human-readable rule name |
+| `sensorType` | `SensorType` | The sensor type whose readings are evaluated |
+| `conditionType` | enum | Comparison operator applied to the reading |
+| `threshold` | number | The value the reading is compared against |
+| `actuatorId` | number | The actuator to control when the condition is met |
+| `actionType` | enum | What to do with the actuator |
+| `active` | boolean | Whether the rule is currently enabled |
+
+### Condition types
+
+<CardGroup cols={2}>
+  <Card title="GREATER_THAN" icon="chevron-right">
+    Triggers when the sensor reading is strictly greater than the threshold value. Use for "too hot", "too humid", or "too bright" scenarios.
+  </Card>
+  <Card title="LESS_THAN" icon="chevron-left">
+    Triggers when the sensor reading is strictly less than the threshold value. Use for "too cold", "too dry", or "too dark" scenarios.
+  </Card>
+  <Card title="EQUALS" icon="equals">
+    Triggers when the sensor reading exactly equals the threshold value. Useful for discrete digital sensors.
+  </Card>
+  <Card title="NOT_EQUALS" icon="x">
+    Triggers when the sensor reading does not equal the threshold value. Useful for detecting unexpected states from digital sensors.
+  </Card>
+</CardGroup>
+
+### Action types
+
+| Action | Effect |
+|---|---|
+| `ACTIVATE` | Turns the actuator on (e.g. start a pump or fan) |
+| `DEACTIVATE` | Turns the actuator off |
+| `ALERT` | Sends an alert notification without changing actuator state |
+
+### Creating a rule
+
+<Steps>
+  <Step title="Select a greenhouse">
+    On the **Automatización** page, click a greenhouse chip. The **Nueva regla** button only appears once a greenhouse is selected.
+  </Step>
+  <Step title="Define the IF condition">
+    Choose a sensor type, a condition type, and a numeric threshold. For example: `TEMPERATURE` `GREATER_THAN` `30` triggers when any temperature sensor in the greenhouse reads above 30 °C.
+  </Step>
+  <Step title="Define the THEN action">
+    Select an actuator (from those registered to the greenhouse) and an action type. For example: actuator "Extractor Fan" with action `ACTIVATE`.
+  </Step>
+  <Step title="Enable the rule">
+    The **Regla activa** checkbox is checked by default. Uncheck it to create the rule in a paused state.
+  </Step>
+  <Step title="Save">
+    Click **Crear regla**. The rule card appears in the list showing the IF block and THEN block side by side.
+  </Step>
+</Steps>
+
+Rules can be paused and resumed at any time using the **Pausar** / **Activar** toggle on each rule card, without deleting the rule.
+
+<Warning>
+  Rules are evaluated on the backend, not in the browser. Reloading or closing the AgroPulse dashboard does not stop rules from running. To permanently stop a rule, delete it or keep it in a paused state.
+</Warning>

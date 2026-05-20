@@ -1,0 +1,118 @@
+---
+title: "System architecture: React SPA and data flow"
+description: "Overview of the AgroPulse React SPA architecture, repository pattern, WebSocket integration, Supabase usage, and the key packages that power the dashboard."
+---
+
+AgroPulse is a frontend-only single-page application built with React 18 and Vite. It communicates with a REST backend over `VITE_API_URL`, uses Supabase for authentication and file storage, and receives real-time sensor data from ESP32 devices via WebSocket. There is no server-side rendering; the entire app ships as static files.
+
+## System layers
+
+<CardGroup cols={3}>
+  <Card title="Presentation" icon="display">
+    React 18 SPA built with Vite and TypeScript. Routing handled by `react-router-dom` v6. UI rendered with Tailwind CSS, shadcn, and animation libraries (GSAP, Anime.js, Three.js, Spline).
+  </Card>
+  <Card title="Data access" icon="database">
+    Repository pattern — each resource has a typed singleton class that extends `BaseRepository`. All HTTP calls go through a central `request()` function in `ApiService.ts`.
+  </Card>
+  <Card title="External services" icon="cloud">
+    REST backend at `VITE_API_URL` (default `http://localhost:8080`). Supabase for auth and storage. ESP32 devices connect via WebSocket for live sensor streaming. Optional AI providers (Groq, GitHub Models, Gemma).
+  </Card>
+</CardGroup>
+
+## Repository pattern
+
+All data access is centralised in `src/core/ApiService.ts`. The `BaseRepository` abstract class exposes five typed HTTP methods that every resource repository inherits:
+
+```typescript
+export abstract class BaseRepository {
+  protected get<T>(endpoint: string, options?: RequestOptions): Promise<T>
+  protected post<T>(endpoint: string, body: unknown, options?: RequestOptions): Promise<T>
+  protected put<T>(endpoint: string, body: unknown, options?: RequestOptions): Promise<T>
+  protected patch<T>(endpoint: string, body?: unknown, options?: RequestOptions): Promise<T>
+  protected delete<T>(endpoint: string, options?: RequestOptions): Promise<T>
+}
+```
+
+Each concrete repository (e.g. `GreenhouseRepository`, `SensorRepository`) is a singleton accessed via `getInstance()`. Singletons are re-exported from `src/repositories/index.ts` as pre-created instances such as `greenhouseRepository` and `sensorRepository`.
+
+### Auth headers
+
+Authentication state is injected globally via `setUserContext()` before any request is made:
+
+```typescript
+import { setUserContext } from '@core/ApiService'
+
+setUserContext({ id: user.id, role: user.role, adminEmail: user.email })
+```
+
+The internal `request()` function then appends headers automatically on every call:
+
+| Header | Source | When present |
+|--------|--------|--------------|
+| `X-User-Id` | `_userCtx.id` | Whenever a user is logged in |
+| `X-Admin-Email` | `_userCtx.adminEmail` | Whenever the logged-in user holds an admin role |
+
+Per-call header overrides are also supported via the `options.headers` parameter.
+
+## Real-time data: WebSocket and EventSource
+
+`src/services/websocket.js` exports two singleton services for live data:
+
+**`websocket`** (`WebSocketService`) — connects to the ESP32 device endpoint, parses JSON-framed messages (`{ type, data }`), emits typed events, and auto-reconnects with exponential backoff (up to 5 attempts, starting at 1 second). On exhausting retries it emits `fallback_to_polling`.
+
+**`eventSource`** (`EventSourceService`) — lighter SSE alternative using the browser's `EventSource` API. Used for server-sent event streams where bidirectional communication is not required.
+
+```javascript
+import { websocket } from '@services/websocket'
+
+websocket.connect('ws://192.168.1.100/ws')
+websocket.on('sensor_reading', (data) => { /* update chart */ })
+websocket.on('fallback_to_polling', () => { /* start polling /api/readings */ })
+```
+
+## Supabase integration
+
+`src/services/supabase.js` exports the project URL and anon key as `SUPABASE_URL` and `SUPABASE_ANON_KEY`, read from Vite environment variables. Supabase is used for:
+
+- OAuth (Google login via `googleId`)
+- Avatar and photo storage (`photoUrl` on `GreenhouseDto`, `avatar` on `UserDto`)
+
+The `@supabase/supabase-js` client is initialised with these values wherever auth flows are triggered.
+
+## Key dependencies
+
+| Package | Version | Role |
+|---------|---------|------|
+| `react` | ^18.3.1 | UI framework |
+| `react-router-dom` | ^6.26.0 | Client-side routing |
+| `@supabase/supabase-js` | ^2.45.0 | Auth and storage |
+| `recharts` | ^2.12.7 | Sensor data charts |
+| `maplibre-gl` | ^5.24.0 | Greenhouse map view |
+| `gsap` | ^3.15.0 | UI animations |
+| `animejs` | ^3.2.2 | Timeline animations |
+| `three` | ^0.184.0 | 3D greenhouse scene |
+| `@splinetool/react-spline` | ^4.1.0 | 3D Spline models |
+| `@emailjs/browser` | ^4.4.1 | Email verification |
+| `tailwindcss` | ^3.4.11 | Utility CSS |
+| `typescript` | ^5.5.4 | Type safety |
+| `vite` | ^5.4.3 | Build tool |
+
+## Path aliases (vite.config.ts)
+
+Vite resolves the following `@`-prefixed aliases to keep imports clean:
+
+```
+@            → src/
+@types       → src/types/
+@core        → src/core/
+@repositories → src/repositories/
+@services    → src/services/
+@pages       → src/pages/
+@components  → src/components/
+@context     → src/context/
+@hooks       → src/hooks/
+```
+
+## Deployment model
+
+AgroPulse is a static SPA with no server-side rendering. `npm run build` runs `tsc && vite build` and outputs to `dist/`. The `dist/` folder is deployed to a CDN or Vercel. A single rewrite rule (`vercel.json`) redirects all routes to `index.html` so that client-side navigation works correctly on direct URL access. See [Deployment](/dev/deployment) for full instructions.

@@ -1,0 +1,691 @@
+---
+title: "REST API reference: endpoints and request shapes"
+description: "All REST endpoints consumed by the AgroPulse frontend, grouped by resource, with request parameters, response shapes, and authentication header requirements."
+---
+
+The AgroPulse frontend communicates exclusively with the REST backend configured via `VITE_API_URL` (default `http://localhost:8080`). Every request is made through `BaseRepository` in `src/core/ApiService.ts`, which automatically injects authentication headers and handles JSON serialisation. This page lists every endpoint used by the frontend, grouped by resource.
+
+## Authentication
+
+All requests include the following headers when a user context is set via `setUserContext()`:
+
+| Header | Type | Description |
+|--------|------|-------------|
+| `X-User-Id` | `string` | ID of the currently authenticated user. Present on all requests after login. |
+| `X-Admin-Email` | `string` | Email of the user, included only when the user holds an admin role. Required by admin-only endpoints. |
+
+<Note>Headers are injected automatically by `ApiService.ts`. You do not set them manually in application code unless you need a one-off override via `options.headers`.</Note>
+
+## Base URL
+
+```
+http://localhost:8080
+```
+
+Override at build time or runtime by setting `VITE_API_URL` in your environment. See [Environment variables](/dev/environment).
+
+---
+
+## Endpoints by resource
+
+<AccordionGroup>
+
+  <Accordion title="Greenhouses">
+    **`GET /api/greenhouses`**
+
+    Returns all greenhouses the authenticated user has access to.
+
+    <ResponseField name="greenhouses" type="GreenhouseDto[]" required>List of greenhouse objects.</ResponseField>
+
+    ---
+
+    **`GET /api/greenhouses/:id`**
+
+    Returns a single greenhouse by ID.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+
+    <ResponseField name="(root)" type="GreenhouseDto" required>The greenhouse object.</ResponseField>
+
+    ---
+
+    **`POST /api/greenhouses`**
+
+    Creates a new greenhouse.
+
+    <ParamField path="body.name" type="string" required>Display name.</ParamField>
+    <ParamField path="body.location" type="string">Human-readable location.</ParamField>
+    <ParamField path="body.description" type="string">Optional description.</ParamField>
+    <ParamField path="body.deviceId" type="string">ESP32 device identifier to link.</ParamField>
+    <ParamField path="body.latitude" type="number">GPS latitude.</ParamField>
+    <ParamField path="body.longitude" type="number">GPS longitude.</ParamField>
+    <ParamField path="body.photoUrl" type="string">Supabase photo URL.</ParamField>
+
+    <ResponseField name="(root)" type="GreenhouseDto" required>The created greenhouse.</ResponseField>
+
+    ---
+
+    **`PUT /api/greenhouses/:id`**
+
+    Updates an existing greenhouse (full or partial fields).
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+
+    Body accepts any subset of `GreenhouseDto` fields.
+
+    <ResponseField name="(root)" type="GreenhouseDto" required>The updated greenhouse.</ResponseField>
+
+    ---
+
+    **`DELETE /api/greenhouses/:id`**
+
+    Deletes a greenhouse.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+
+    Returns `204 No Content`.
+  </Accordion>
+
+  <Accordion title="Greenhouse users">
+    **`GET /api/greenhouses/:id/users`**
+
+    Lists users assigned to a greenhouse.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+
+    <ResponseField name="users" type="UserDto[]" required>List of user objects.</ResponseField>
+
+    ---
+
+    **`POST /api/greenhouses/:id/users`**
+
+    Assigns a user to a greenhouse.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+    <ParamField path="body.userId" type="number" required>ID of the user to assign.</ParamField>
+
+    Returns `204 No Content`.
+
+    ---
+
+    **`DELETE /api/greenhouses/:id/users/:userId`**
+
+    Removes a user from a greenhouse.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+    <ParamField path="path.userId" type="number" required>User ID to remove.</ParamField>
+
+    Returns `204 No Content`.
+  </Accordion>
+
+  <Accordion title="Alert recipients">
+    **`GET /api/greenhouses/:id/alert-recipients`**
+
+    Lists alert recipients for a greenhouse.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+
+    <ResponseField name="recipients" type="AlertRecipient[]" required>List of recipient objects.</ResponseField>
+
+    ---
+
+    **`POST /api/greenhouses/:id/alert-recipients`**
+
+    Adds an alert recipient to a greenhouse.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+    <ParamField path="body.name" type="string" required>Recipient display name.</ParamField>
+    <ParamField path="body.email" type="string">Email address for notifications.</ParamField>
+    <ParamField path="body.phone" type="string">Phone number for SMS.</ParamField>
+    <ParamField path="body.callmebotApikey" type="string">CallMeBot API key for WhatsApp/Telegram.</ParamField>
+
+    <ResponseField name="(root)" type="AlertRecipient" required>The created recipient.</ResponseField>
+
+    ---
+
+    **`DELETE /api/greenhouses/:id/alert-recipients/:recipientId`**
+
+    Removes an alert recipient.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+    <ParamField path="path.recipientId" type="number" required>Recipient ID to remove.</ParamField>
+
+    Returns `204 No Content`.
+  </Accordion>
+
+  <Accordion title="Sensors">
+    **`GET /api/sensors`**
+
+    Returns all sensors, optionally filtered by greenhouse.
+
+    <ParamField path="query.greenhouseId" type="number">Filter sensors belonging to this greenhouse.</ParamField>
+
+    <ResponseField name="sensors" type="SensorDto[]" required>List of sensor objects.</ResponseField>
+
+    ---
+
+    **`GET /api/sensors/:id`**
+
+    Returns a single sensor by ID.
+
+    <ParamField path="path.id" type="number" required>Sensor ID.</ParamField>
+
+    <ResponseField name="(root)" type="SensorDto" required>The sensor object.</ResponseField>
+
+    ---
+
+    **`POST /api/sensors`**
+
+    Creates a sensor.
+
+    <ParamField path="body.name" type="string" required>Sensor display name.</ParamField>
+    <ParamField path="body.type" type="SensorType" required>Measurement type.</ParamField>
+    <ParamField path="body.protocol" type="Protocol">Hardware protocol.</ParamField>
+    <ParamField path="body.gpioPin" type="number">GPIO pin on the ESP32.</ParamField>
+    <ParamField path="body.greenhouseId" type="number">Parent greenhouse.</ParamField>
+
+    <ResponseField name="(root)" type="SensorDto" required>The created sensor.</ResponseField>
+
+    ---
+
+    **`PUT /api/sensors/:id`**
+
+    Updates a sensor.
+
+    <ParamField path="path.id" type="number" required>Sensor ID.</ParamField>
+
+    Body accepts any subset of `SensorDto` fields.
+
+    ---
+
+    **`DELETE /api/sensors/:id`**
+
+    Deletes a sensor.
+
+    <ParamField path="path.id" type="number" required>Sensor ID.</ParamField>
+
+    Returns `204 No Content`.
+
+    ---
+
+    **`GET /api/sensors/:id/threshold`**
+
+    Returns the anomaly threshold configuration for a sensor.
+
+    <ParamField path="path.id" type="number" required>Sensor ID.</ParamField>
+
+    <ResponseField name="(root)" type="SensorThresholdDto" required>Threshold configuration object.</ResponseField>
+
+    ---
+
+    **`PUT /api/sensors/:id/threshold`**
+
+    Creates or updates the threshold for a sensor.
+
+    <ParamField path="path.id" type="number" required>Sensor ID.</ParamField>
+    <ParamField path="body.minValue" type="number">Minimum acceptable value.</ParamField>
+    <ParamField path="body.maxValue" type="number">Maximum acceptable value.</ParamField>
+    <ParamField path="body.noDataMinutes" type="number" required>No-data alert window in minutes.</ParamField>
+    <ParamField path="body.stuckMinutes" type="number" required>Stuck-sensor alert window in minutes.</ParamField>
+    <ParamField path="body.spikePercent" type="number" required>Spike detection threshold percentage.</ParamField>
+
+    <ResponseField name="(root)" type="SensorThresholdDto" required>Updated threshold object.</ResponseField>
+
+    ---
+
+    **`DELETE /api/sensors/:id/threshold`**
+
+    Removes the threshold configuration for a sensor.
+
+    <ParamField path="path.id" type="number" required>Sensor ID.</ParamField>
+
+    Returns `204 No Content`.
+  </Accordion>
+
+  <Accordion title="Actuators">
+    **`GET /api/actuators`**
+
+    Returns all actuators, optionally filtered by greenhouse.
+
+    <ParamField path="query.greenhouseId" type="number">Filter actuators belonging to this greenhouse.</ParamField>
+
+    <ResponseField name="actuators" type="ActuatorDto[]" required>List of actuator objects.</ResponseField>
+
+    ---
+
+    **`GET /api/actuators/:id`**
+
+    Returns a single actuator by ID.
+
+    <ParamField path="path.id" type="number" required>Actuator ID.</ParamField>
+
+    <ResponseField name="(root)" type="ActuatorDto" required>The actuator object.</ResponseField>
+
+    ---
+
+    **`POST /api/actuators`**
+
+    Creates an actuator.
+
+    <ParamField path="body.name" type="string" required>Display name.</ParamField>
+    <ParamField path="body.type" type="ActuatorType">Actuator category.</ParamField>
+    <ParamField path="body.gpioPin" type="number">GPIO pin on the ESP32.</ParamField>
+    <ParamField path="body.activeLow" type="boolean">Set to `true` for active-low relays.</ParamField>
+    <ParamField path="body.greenhouseId" type="number">Parent greenhouse.</ParamField>
+
+    <ResponseField name="(root)" type="ActuatorDto" required>The created actuator.</ResponseField>
+
+    ---
+
+    **`PUT /api/actuators/:id`**
+
+    Updates an actuator.
+
+    <ParamField path="path.id" type="number" required>Actuator ID.</ParamField>
+
+    Body accepts any subset of `ActuatorDto` fields.
+
+    ---
+
+    **`DELETE /api/actuators/:id`**
+
+    Deletes an actuator.
+
+    <ParamField path="path.id" type="number" required>Actuator ID.</ParamField>
+
+    Returns `204 No Content`.
+  </Accordion>
+
+  <Accordion title="Sensor readings">
+    **`GET /api/readings`**
+
+    Returns sensor readings. Exactly one of `sensor` or `greenhouseId` is typically supplied to scope the results.
+
+    <ParamField path="query.sensor" type="number">Return readings for this sensor ID only.</ParamField>
+    <ParamField path="query.greenhouseId" type="number">Return readings for all sensors in this greenhouse.</ParamField>
+    <ParamField path="query.limit" type="number" default="100">Maximum number of readings to return.</ParamField>
+
+    <ResponseField name="readings" type="SensorReadingDto[]" required>List of reading objects ordered by timestamp descending.</ResponseField>
+
+    ---
+
+    **`POST /api/readings`**
+
+    Creates a sensor reading (used by device proxies or manual entry).
+
+    <ParamField path="body.sensorId" type="number" required>Sensor that produced the reading.</ParamField>
+    <ParamField path="body.value" type="number" required>Measured value.</ParamField>
+    <ParamField path="body.timestamp" type="string">ISO 8601 timestamp. Defaults to server time if omitted.</ParamField>
+
+    <ResponseField name="(root)" type="SensorReadingDto" required>The created reading.</ResponseField>
+  </Accordion>
+
+  <Accordion title="Crops">
+    **`GET /api/crops`**
+
+    Returns all crop profiles.
+
+    <ResponseField name="crops" type="CropDto[]" required>List of crop objects.</ResponseField>
+
+    ---
+
+    **`GET /api/crops/:id`**
+
+    Returns a single crop profile.
+
+    <ParamField path="path.id" type="number" required>Crop ID.</ParamField>
+
+    <ResponseField name="(root)" type="CropDto" required>The crop object.</ResponseField>
+
+    ---
+
+    **`POST /api/crops`**
+
+    Creates a crop profile.
+
+    <ParamField path="body.name" type="string" required>Crop name.</ParamField>
+    <ParamField path="body.greenhouseId" type="number">Greenhouse to assign the crop to.</ParamField>
+    <ParamField path="body.temp_min" type="number">Minimum temperature (°C).</ParamField>
+    <ParamField path="body.temp_max" type="number">Maximum temperature (°C).</ParamField>
+
+    Body accepts any additional `CropDto` range fields.
+
+    <ResponseField name="(root)" type="CropDto" required>The created crop.</ResponseField>
+
+    ---
+
+    **`PUT /api/crops/:id`**
+
+    Updates a crop profile.
+
+    <ParamField path="path.id" type="number" required>Crop ID.</ParamField>
+
+    ---
+
+    **`DELETE /api/crops/:id`**
+
+    Deletes a crop profile.
+
+    <ParamField path="path.id" type="number" required>Crop ID.</ParamField>
+
+    Returns `204 No Content`.
+  </Accordion>
+
+  <Accordion title="Alerts">
+    **`GET /api/alerts`**
+
+    Returns all alerts for the authenticated user's accessible greenhouses.
+
+    <ResponseField name="alerts" type="AlertDto[]" required>List of alert objects.</ResponseField>
+
+    ---
+
+    **`POST /api/alerts`**
+
+    Creates an alert manually.
+
+    <ParamField path="body.type" type="string" required>Sensor type or custom category.</ParamField>
+    <ParamField path="body.level" type="AlertLevel" required>Severity: `INFO`, `WARNING`, or `CRITICAL`.</ParamField>
+    <ParamField path="body.message" type="string" required>Alert message body.</ParamField>
+    <ParamField path="body.title" type="string">Short title.</ParamField>
+    <ParamField path="body.greenhouseId" type="number">Associated greenhouse.</ParamField>
+
+    <ResponseField name="(root)" type="AlertDto" required>The created alert.</ResponseField>
+
+    ---
+
+    **`PUT /api/alerts/:id/read`**
+
+    Marks an alert as read.
+
+    <ParamField path="path.id" type="number" required>Alert ID.</ParamField>
+
+    Returns `204 No Content`.
+
+    ---
+
+    **`DELETE /api/alerts/:id`**
+
+    Deletes an alert.
+
+    <ParamField path="path.id" type="number" required>Alert ID.</ParamField>
+
+    Returns `204 No Content`.
+  </Accordion>
+
+  <Accordion title="Automation rules">
+    **`GET /api/rules`**
+
+    Returns all automation rules.
+
+    <ResponseField name="rules" type="RuleDto[]" required>List of rule objects.</ResponseField>
+
+    ---
+
+    **`POST /api/rules`**
+
+    Creates a rule.
+
+    <ParamField path="body.name" type="string" required>Rule name.</ParamField>
+    <ParamField path="body.sensorType" type="SensorType" required>Sensor type to monitor.</ParamField>
+    <ParamField path="body.conditionType" type="RuleConditionType" required>Comparison operator.</ParamField>
+    <ParamField path="body.threshold" type="number" required>Trigger value.</ParamField>
+    <ParamField path="body.actuatorId" type="number" required>Actuator to control.</ParamField>
+    <ParamField path="body.actionType" type="RuleActionType" required>Action to perform.</ParamField>
+
+    <ResponseField name="(root)" type="RuleDto" required>The created rule.</ResponseField>
+
+    ---
+
+    **`PUT /api/rules/:id`**
+
+    Updates a rule.
+
+    <ParamField path="path.id" type="number" required>Rule ID.</ParamField>
+
+    ---
+
+    **`DELETE /api/rules/:id`**
+
+    Deletes a rule.
+
+    <ParamField path="path.id" type="number" required>Rule ID.</ParamField>
+
+    Returns `204 No Content`.
+  </Accordion>
+
+  <Accordion title="Audit logs">
+    **`GET /api/logs`**
+
+    Returns audit log entries.
+
+    <ParamField path="query.limit" type="number" default="100">Maximum number of entries to return.</ParamField>
+
+    <ResponseField name="logs" type="LogDto[]" required>List of log entries ordered by timestamp descending.</ResponseField>
+  </Accordion>
+
+  <Accordion title="Reports">
+    **`GET /api/reports/daily-csv`**
+
+    Returns or initiates a daily CSV report download.
+
+    ---
+
+    **`GET /api/reports/weekly-stats`**
+
+    Returns weekly aggregated statistics.
+
+    ---
+
+    **`POST /api/reports/send-email`**
+
+    Sends a report via email.
+
+    <ParamField path="body.(varies)" type="object">Report payload — recipient, date range, and format fields.</ParamField>
+
+    ---
+
+    **`POST /api/reports/schedule`**
+
+    Schedules a recurring report.
+
+    ---
+
+    **`GET /api/reports/history`**
+
+    Returns report generation history.
+
+    <ParamField path="query.limit" type="number" default="10">Maximum number of history entries.</ParamField>
+  </Accordion>
+
+  <Accordion title="Users and auth">
+    **`POST /api/auth/login`**
+
+    Authenticates a user with username/password or Google OAuth.
+
+    <Tabs>
+      <Tab title="Username/password">
+        <ParamField path="body.username" type="string" required>Login username.</ParamField>
+        <ParamField path="body.password" type="string" required>User password.</ParamField>
+      </Tab>
+      <Tab title="Google OAuth">
+        <ParamField path="body.email" type="string" required>Google account email.</ParamField>
+        <ParamField path="body.name" type="string" required>Full name from Google profile.</ParamField>
+        <ParamField path="body.googleId" type="string" required>Google OAuth UID.</ParamField>
+      </Tab>
+    </Tabs>
+
+    <ResponseField name="(root)" type="UserDto" required>The authenticated user object.</ResponseField>
+
+    ---
+
+    **`POST /api/auth/register`**
+
+    Registers a new user account.
+
+    <ParamField path="body.username" type="string" required>Desired username.</ParamField>
+    <ParamField path="body.password" type="string" required>Password.</ParamField>
+    <ParamField path="body.fullName" type="string" required>Full display name.</ParamField>
+    <ParamField path="body.email" type="string">Optional email address.</ParamField>
+
+    <ResponseField name="(root)" type="UserDto" required>The created user object.</ResponseField>
+
+    ---
+
+    **`GET /api/auth/me`**
+
+    Returns the profile of the currently authenticated user (uses `X-User-Id` header).
+
+    <ResponseField name="(root)" type="UserDto" required>Current user object.</ResponseField>
+
+    ---
+
+    **`GET /api/auth/users`** _(admin only)_
+
+    Returns all user accounts. Requires `X-Admin-Email` header.
+
+    <ResponseField name="users" type="UserDto[]" required>List of all users.</ResponseField>
+
+    ---
+
+    **`PUT /api/auth/users/:userId/role`** _(admin only)_
+
+    Changes a user's role.
+
+    <ParamField path="path.userId" type="number" required>Target user ID.</ParamField>
+    <ParamField path="body.role" type="string" required>New role: `ADMIN` or `USER`.</ParamField>
+
+    Returns `204 No Content`.
+
+    ---
+
+    **`GET /api/users`**
+
+    Returns all users (non-admin variant).
+
+    <ResponseField name="users" type="UserDto[]" required>List of user objects.</ResponseField>
+
+    ---
+
+    **`POST /api/users`**
+
+    Creates a user.
+
+    ---
+
+    **`PUT /api/users/:id`**
+
+    Updates a user.
+
+    <ParamField path="path.id" type="number" required>User ID.</ParamField>
+
+    ---
+
+    **`DELETE /api/users/:id`**
+
+    Deletes a user.
+
+    <ParamField path="path.id" type="number" required>User ID.</ParamField>
+
+    Returns `204 No Content`.
+
+    ---
+
+    **`GET /api/users/:id/greenhouses`**
+
+    Returns the greenhouse IDs a user has access to.
+
+    <ParamField path="path.id" type="number" required>User ID.</ParamField>
+
+    <ResponseField name="ids" type="number[]" required>List of greenhouse IDs.</ResponseField>
+
+    ---
+
+    **`PUT /api/auth/users/:userId/greenhouses`** _(admin only)_
+
+    Sets the greenhouse access list for a user.
+
+    <ParamField path="path.userId" type="number" required>User ID.</ParamField>
+    <ParamField path="body.ids" type="number[]" required>Array of greenhouse IDs to assign.</ParamField>
+
+    <ResponseField name="ids" type="number[]" required>Updated list of assigned greenhouse IDs.</ResponseField>
+  </Accordion>
+
+  <Accordion title="Device">
+    **`POST /api/device/register`**
+
+    Registers a new ESP32 device.
+
+    <ParamField path="body.(varies)" type="object">Device registration payload (device ID, firmware version, etc.).</ParamField>
+
+    ---
+
+    **`GET /api/device/config/:id`**
+
+    Returns the full sensor and actuator configuration for a greenhouse's device.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+
+    <ResponseField name="deviceId" type="string">ESP32 device identifier.</ResponseField>
+    <ResponseField name="sensors" type="SensorDto[]" required>Sensors registered to this device.</ResponseField>
+    <ResponseField name="actuators" type="ActuatorDto[]" required>Actuators registered to this device.</ResponseField>
+
+    ---
+
+    **`GET /api/device/gpios/:id`**
+
+    Returns available and used GPIO pins for a greenhouse's device.
+
+    <ParamField path="path.id" type="number" required>Greenhouse ID.</ParamField>
+
+    <ResponseField name="usedGpios" type="number[]" required>Pins already assigned.</ResponseField>
+    <ResponseField name="availableForSensors" type="number[]" required>Pins available for sensor assignment.</ResponseField>
+    <ResponseField name="availableForActuators" type="number[]" required>Pins available for actuator assignment.</ResponseField>
+  </Accordion>
+
+  <Accordion title="Tickets">
+    **`GET /api/tickets`**
+
+    Returns all support tickets.
+
+    <ResponseField name="tickets" type="TicketDto[]" required>List of ticket objects.</ResponseField>
+
+    ---
+
+    **`GET /api/tickets/:id`**
+
+    Returns a single ticket.
+
+    <ParamField path="path.id" type="number" required>Ticket ID.</ParamField>
+
+    ---
+
+    **`POST /api/tickets`**
+
+    Creates a support ticket.
+
+    <ParamField path="body.subject" type="string" required>Ticket subject.</ParamField>
+    <ParamField path="body.description" type="string" required>Full description of the issue.</ParamField>
+
+    <ResponseField name="(root)" type="TicketDto" required>The created ticket.</ResponseField>
+
+    ---
+
+    **`PUT /api/tickets/:id`**
+
+    Updates a ticket (e.g. change status).
+
+    <ParamField path="path.id" type="number" required>Ticket ID.</ParamField>
+
+    ---
+
+    **`DELETE /api/tickets/:id`**
+
+    Deletes a ticket.
+
+    <ParamField path="path.id" type="number" required>Ticket ID.</ParamField>
+
+    Returns `204 No Content`.
+  </Accordion>
+
+</AccordionGroup>

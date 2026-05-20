@@ -1,45 +1,45 @@
 ---
 title: "AgroPulse: real-time IoT greenhouse management"
-description: "AgroPulse monitors greenhouse sensors, controls actuators, automates rules, and delivers AI-powered agronomic advice for farm operators and administrators."
+description: "AgroPulse is a full-featured dashboard for monitoring greenhouse sensors, controlling actuators, automating rules, and getting AI-powered agronomic advice."
 ---
 
-AgroPulse is a real-time IoT management platform for greenhouse operators and farm administrators. It connects to ESP32 devices to collect live sensor data — temperature, humidity, CO₂, soil moisture, light, and pressure — and provides the tools to act on that data through automated rules, manual actuator control, and an AI agronomic assistant.
+AgroPulse is a real-time IoT management platform built for greenhouse operators and farm administrators. It connects to ESP32 devices to collect live sensor data — temperature, humidity, CO₂, soil moisture, light, and pressure — and gives you the tools to act on that data through automated rules, manual actuator control, and an AI agronomic assistant.
 
 <CardGroup cols={2}>
   <Card title="Quickstart" icon="rocket" href="/quickstart">
-    Set up your account, connect your first greenhouse, and start seeing live sensor data.
+    Set up your account, connect your first greenhouse, and start seeing live sensor data in minutes.
   </Card>
   <Card title="Authentication" icon="lock" href="/authentication">
-    Sign in with Google via Supabase OAuth. Learn about roles and greenhouse access.
+    Sign in with Google via Supabase OAuth. Learn about roles and greenhouse access permissions.
   </Card>
   <Card title="Dashboard" icon="gauge" href="/features/dashboard">
     Explore the main control panel — sensor cards, live charts, and real-time alerts.
   </Card>
-  <Card title="AI assistant" icon="robot" href="/features/ai-assistant">
-    Get data-driven recommendations from Groq, GitHub AI, or Google Gemma.
+  <Card title="AI Assistant" icon="robot" href="/features/ai-assistant">
+    Ask agronomic questions and get data-driven recommendations from Groq, GitHub AI, or Google Gemma.
   </Card>
 </CardGroup>
 
 ## What AgroPulse does
 
-AgroPulse bridges the gap between physical greenhouse hardware and actionable farm intelligence. It polls your ESP32 microcontrollers every few seconds and surfaces readings in a clean, role-aware dashboard. Beyond monitoring, it lets you:
+AgroPulse bridges the gap between physical greenhouse hardware and actionable farm intelligence. At its core, it polls your ESP32 microcontrollers every few seconds and surfaces the readings in a clean, role-aware dashboard. Beyond monitoring, it lets you:
 
 - **Automate** actuators (pumps, fans, LEDs, relays) when sensor values cross thresholds you define
 - **Alert** the right people by email or WhatsApp (via CallMeBot) when conditions deviate from your crop's ideal range
 - **Analyze** historical trends with time-series charts and generate downloadable reports
-- **Ask AI** — powered by Groq LLaMA 3.1, GitHub GPT-4o mini, or Google Gemma 4 — for agronomic advice based on live sensor context
+- **Ask AI** — powered by Groq LLaMA 3.1, GitHub GPT-4o mini, or Google Gemma 4 — for tailored agronomic advice based on live sensor context
 
 <CardGroup cols={2}>
   <Card title="Greenhouses" icon="seedling" href="/features/greenhouses">
     Create and manage greenhouse locations, assign operators, and configure ESP32 devices.
   </Card>
-  <Card title="Sensors & actuators" icon="microchip" href="/features/sensors-actuators">
+  <Card title="Sensors & Actuators" icon="microchip" href="/features/sensors-actuators">
     Register sensors and actuators, set thresholds, and monitor GPIO pin assignments.
   </Card>
-  <Card title="Crops & automation" icon="leaf" href="/features/crops-automation">
+  <Card title="Crops & Automation" icon="leaf" href="/features/crops-automation">
     Define crop profiles with ideal ranges and create rules that trigger actuators automatically.
   </Card>
-  <Card title="Analytics & reports" icon="chart-line" href="/features/analytics-reports">
+  <Card title="Analytics & Reports" icon="chart-line" href="/features/analytics-reports">
     View historical sensor charts, filter by greenhouse, and export PDF or CSV reports.
   </Card>
 </CardGroup>
